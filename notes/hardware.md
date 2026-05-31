@@ -1,0 +1,1 @@
+Mon ordinateur principal est un MacBook Air M1.
