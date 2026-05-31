@@ -1,3 +1,3 @@
 # Identity
 
-- L'utilisateur travaille sur un MacBook Air M1.
+- L'utilisateur travaille sur un Mac M4.
