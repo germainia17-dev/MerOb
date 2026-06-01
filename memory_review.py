@@ -71,16 +71,92 @@ def get_existing_memories():
 def detect_category(memory):
     text = memory.lower()
 
-    if "projet" in text or "développe" in text or "developpe" in text or "ai os" in text:
+    if (
+        "a décidé" in text
+        or "decision" in text
+        or "décision" in text
+        or "choix" in text
+        or "a choisi" in text
+        or "validation" in text
+        or "valider" in text
+        or "intégration" in text
+        or "integration" in text
+    ):
+        return "Decisions.md"
+
+    if (
+        "idée" in text
+        or "idee" in text
+        or "ajouter" in text
+        or "fonctionnalité" in text
+        or "fonctionnalite" in text
+        or "compteur" in text
+        or "piste" in text
+    ):
+        return "Ideas.md"
+
+    if (
+        "a appris" in text
+        or "comprend" in text
+        or "connaît" in text
+        or "connait" in text
+        or "sait" in text
+        or "concept" in text
+        or "rag" in text
+        or "embedding" in text
+    ):
+        return "Knowledge.md"
+
+    if (
+        "doit faire" in text
+        or "à faire" in text
+        or "a faire" in text
+        or "tâche" in text
+        or "tache" in text
+        or "todo" in text
+        or "corriger" in text
+        or "tester" in text
+        or "créer" in text
+        or "creer" in text
+    ):
+        return "Tasks.md"
+
+    if (
+        "projet" in text
+        or "développe" in text
+        or "developpe" in text
+        or "ai os" in text
+    ):
         return "Projects.md"
 
-    if "obsidian" in text or "gemini" in text or "claude" in text or "chatgpt" in text or "outil" in text:
+    if (
+        "obsidian" in text
+        or "gemini" in text
+        or "claude" in text
+        or "chatgpt" in text
+        or "outil" in text
+        or "python" in text
+        or "vscode" in text
+        or "vs code" in text
+    ):
         return "Tools.md"
 
-    if "macbook" in text or "mac " in text or "ordinateur" in text or "utilisateur travaille" in text:
+    if (
+        "macbook" in text
+        or "mac " in text
+        or "ordinateur" in text
+        or "utilisateur travaille" in text
+        or "utilisateur utilise un mac" in text
+    ):
         return "Identity.md"
 
-    if "objectif" in text or "veut" in text or "souhaite" in text or "but" in text:
+    if (
+        "objectif" in text
+        or "veut" in text
+        or "souhaite" in text
+        or "but" in text
+        or "l'objectif" in text
+    ):
         return "Goals.md"
 
     return "Other.md"
@@ -138,6 +214,7 @@ def reconcile_with_gemini(new_memory):
             "classification": "NEW",
             "file": None,
             "old": None,
+            "current": None,
             "new": new_memory,
             "raw": "",
         }
@@ -364,3 +441,30 @@ if category_counts:
         print(f"- {category} : {count}")
 
 print(f"\nDossier mémoire : {memory_dir}")
+
+# ======================
+# NETTOYAGE INBOX
+# ======================
+
+cleanup = input(
+    "\nVider l'Inbox maintenant ? (o/n) : "
+).lower().strip()
+
+if cleanup == "o":
+
+    inbox_content = f"""# Mémoires à valider
+
+Date : À compléter
+
+"""
+
+    inbox_path.write_text(
+        inbox_content,
+        encoding="utf-8"
+    )
+
+    print("Inbox vidée.")
+
+else:
+
+    print("Inbox conservée.")
