@@ -1,4 +1,9 @@
-Je développe AI OS.
-J’utilise Obsidian comme base de connaissances.
-Je travaille sur un MacBook Air M1.
-Je veux créer une mémoire externe pour mes IA.
+J'utilise maintenant un Mac M4.
+
+Je continue le développement de AI OS.
+
+Je veux créer un système de mémoire cohérent capable de fonctionner avec ChatGPT, Claude et Gemini.
+
+J'ai pris la décision de toujours valider les mémoires avant leur intégration.
+
+J'ai l'idée d'ajouter un compteur indiquant le nombre de mémoires à valider.

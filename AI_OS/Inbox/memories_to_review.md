@@ -1,18 +1,18 @@
 # Mémoires à valider
 
-Date : 2026-05-31
+Date : 2026-06-01
 
-## Haute confiance
+## Identity
+- [ ] L'utilisateur utilise un Mac M4.
 
-- [ ] L'utilisateur développe un projet nommé "AI OS".
-- [ ] L'utilisateur utilise Obsidian comme base de connaissances.
-- [ ] L'utilisateur travaille sur un MacBook Air M1.
-- [ ] L'objectif de l'utilisateur est de créer une mémoire externe pour ses IA.
+## Projects
+- [ ] L'utilisateur développe le projet AI OS.
 
-## À vérifier
+## Goals
+- [ ] L'utilisateur veut créer un système de mémoire cohérent compatible avec ChatGPT, Claude et Gemini.
 
-- [ ]
+## Ideas
+- [ ] L'utilisateur veut ajouter un compteur indiquant le nombre de mémoires à valider.
 
-## Faible priorité
-
-- [ ]
+## Decisions
+- [ ] L'utilisateur a décidé de toujours valider les mémoires avant leur intégration.
