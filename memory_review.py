@@ -1,20 +1,16 @@
 from pathlib import Path
-from dotenv import load_dotenv
-from google import genai
-import os
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # ======================
 # CONFIG
 # ======================
 
-load_dotenv()
+DOUBLON_THRESHOLD = 0.85   # au-dessus → doublon certain
+UPDATE_THRESHOLD  = 0.60   # entre les deux → potentiel update
 
-api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    raise ValueError("Erreur : GEMINI_API_KEY manquante dans le fichier .env")
-
-client = genai.Client(api_key=api_key)
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
 memory_dir = Path("AI_OS/Memory")
@@ -48,115 +44,34 @@ if not memories:
 # ======================
 
 def get_existing_memories():
-    existing_memories = []
-
+    existing = []
     for file in memory_dir.glob("*.md"):
-        file_content = file.read_text(encoding="utf-8")
-
-        for line in file_content.splitlines():
+        for line in file.read_text(encoding="utf-8").splitlines():
             if line.startswith("- "):
-                memory = line.replace("- ", "").strip()
-
+                memory = line[2:].strip()
                 if memory:
-                    existing_memories.append(
-                        {
-                            "file": file.name,
-                            "memory": memory,
-                        }
-                    )
-
-    return existing_memories
+                    existing.append({"file": file.name, "memory": memory})
+    return existing
 
 
 def detect_category(memory):
     text = memory.lower()
 
-    if (
-        "a décidé" in text
-        or "decision" in text
-        or "décision" in text
-        or "choix" in text
-        or "a choisi" in text
-        or "validation" in text
-        or "valider" in text
-        or "intégration" in text
-        or "integration" in text
-    ):
+    if any(w in text for w in ["décidé", "decision", "décision", "choix", "choisi", "validation", "intégration"]):
         return "Decisions.md"
-
-    if (
-        "idée" in text
-        or "idee" in text
-        or "ajouter" in text
-        or "fonctionnalité" in text
-        or "fonctionnalite" in text
-        or "compteur" in text
-        or "piste" in text
-    ):
+    if any(w in text for w in ["idée", "ajouter", "fonctionnalité", "piste"]):
         return "Ideas.md"
-
-    if (
-        "a appris" in text
-        or "comprend" in text
-        or "connaît" in text
-        or "connait" in text
-        or "sait" in text
-        or "concept" in text
-        or "rag" in text
-        or "embedding" in text
-    ):
+    if any(w in text for w in ["a appris", "comprend", "connaît", "concept", "rag", "embedding"]):
         return "Knowledge.md"
-
-    if (
-        "doit faire" in text
-        or "à faire" in text
-        or "a faire" in text
-        or "tâche" in text
-        or "tache" in text
-        or "todo" in text
-        or "corriger" in text
-        or "tester" in text
-        or "créer" in text
-        or "creer" in text
-    ):
+    if any(w in text for w in ["doit faire", "à faire", "tâche", "todo", "corriger", "tester", "créer"]):
         return "Tasks.md"
-
-    if (
-        "projet" in text
-        or "développe" in text
-        or "developpe" in text
-        or "ai os" in text
-    ):
+    if any(w in text for w in ["projet", "développe", "ai os"]):
         return "Projects.md"
-
-    if (
-        "obsidian" in text
-        or "gemini" in text
-        or "claude" in text
-        or "chatgpt" in text
-        or "outil" in text
-        or "python" in text
-        or "vscode" in text
-        or "vs code" in text
-    ):
+    if any(w in text for w in ["obsidian", "gemini", "claude", "chatgpt", "outil", "python", "vscode"]):
         return "Tools.md"
-
-    if (
-        "macbook" in text
-        or "mac " in text
-        or "ordinateur" in text
-        or "utilisateur travaille" in text
-        or "utilisateur utilise un mac" in text
-    ):
+    if any(w in text for w in ["macbook", "mac ", "ordinateur", "utilisateur travaille"]):
         return "Identity.md"
-
-    if (
-        "objectif" in text
-        or "veut" in text
-        or "souhaite" in text
-        or "but" in text
-        or "l'objectif" in text
-    ):
+    if any(w in text for w in ["objectif", "veut", "souhaite", "but"]):
         return "Goals.md"
 
     return "Other.md"
@@ -166,184 +81,72 @@ def add_memory_to_file(memory, filename):
     file_path = memory_dir / filename
     title = filename.replace(".md", "")
 
-    existing = ""
-
-    if file_path.exists():
-        existing = file_path.read_text(encoding="utf-8")
-
-    if not existing:
-        existing = f"# {title}\n\n"
+    existing = file_path.read_text(encoding="utf-8") if file_path.exists() else f"# {title}\n\n"
 
     if memory in existing:
         print(f"Déjà existante, ignorée : {memory}")
         return "duplicate"
 
-    existing += f"- {memory}\n"
-    file_path.write_text(existing, encoding="utf-8")
-
+    file_path.write_text(existing + f"- {memory}\n", encoding="utf-8")
     return "added"
 
 
 def update_memory_in_file(filename, old_memory, new_memory):
     file_path = memory_dir / filename
-
     if not file_path.exists():
         print(f"Erreur : fichier introuvable : {filename}")
         return False
 
     content = file_path.read_text(encoding="utf-8")
-
     old_line = f"- {old_memory}"
-    new_line = f"- {new_memory}"
 
     if old_line not in content:
-        print("Erreur : ancienne mémoire introuvable dans le fichier.")
+        print("Erreur : ancienne mémoire introuvable.")
         return False
 
-    content = content.replace(old_line, new_line)
-    file_path.write_text(content, encoding="utf-8")
-
+    file_path.write_text(content.replace(old_line, f"- {new_memory}"), encoding="utf-8")
     return True
 
 
-def reconcile_with_gemini(new_memory):
-    existing_memories = get_existing_memories()
+# ======================
+# RÉCONCILIATION LOCALE
+# (zéro appel API)
+# ======================
 
+def reconcile_local(new_memory, existing_memories):
     if not existing_memories:
-        return {
-            "classification": "NEW",
-            "file": None,
-            "old": None,
-            "current": None,
-            "new": new_memory,
-            "raw": "",
-        }
+        return {"classification": "NEW", "match": None, "score": 0.0}
 
-    memories_text = ""
+    texts = [m["memory"] for m in existing_memories]
 
-    for index, item in enumerate(existing_memories, start=1):
-        memories_text += f"{index}. [{item['file']}] {item['memory']}\n"
+    new_emb      = model.encode([new_memory])
+    existing_emb = model.encode(texts)
 
-    prompt = f"""
-Tu es un système de mémoire.
+    scores   = cosine_similarity(new_emb, existing_emb)[0]
+    best_idx = int(np.argmax(scores))
+    best_score = float(scores[best_idx])
+    best_match = existing_memories[best_idx]
 
-Compare la mémoire candidate avec les mémoires existantes.
-
-Tu dois répondre avec UNE SEULE classification :
-
-DOUBLON :
-La mémoire candidate répète une information déjà présente.
-
-UPDATE :
-La mémoire candidate remplace une mémoire existante plus ancienne.
-
-OLD_INFO :
-La mémoire candidate est une ancienne information déjà remplacée par une mémoire plus récente.
-Exemple :
-Mémoire existante : L'utilisateur travaille sur un Mac M4.
-Mémoire candidate : L'utilisateur travaille sur un MacBook Air M1.
-=> OLD_INFO
-
-NEW :
-La mémoire candidate ajoute une information réellement nouvelle.
-
-Réponds UNIQUEMENT dans ce format :
-
-Classification: DOUBLON
-
-ou
-
-Classification: UPDATE
-File: nom_du_fichier.md
-Old: ancienne mémoire à remplacer
-New: nouvelle mémoire reformulée
-
-ou
-
-Classification: OLD_INFO
-File: nom_du_fichier.md
-Old: mémoire candidate obsolète
-Current: mémoire actuelle plus récente
-
-ou
-
-Classification: NEW
-New: mémoire reformulée
-
-Règles :
-- Si la candidate est plus récente et remplace une ancienne info, réponds UPDATE.
-- Si la candidate est plus ancienne que l'info existante, réponds OLD_INFO.
-- Si elle répète une info existante, réponds DOUBLON.
-- Si elle ajoute une vraie nouvelle info, réponds NEW.
-- Ne mets aucune explication.
-- Respecte exactement les labels : Classification, File, Old, Current, New.
-
-Mémoires existantes :
-
-{memories_text}
-
-Mémoire candidate :
-
-{new_memory}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-    )
-
-    result = response.text.strip()
-
-    classification = None
-    target_file = None
-    old_memory = None
-    current_memory = None
-    new_memory_text = new_memory
-
-    for line in result.splitlines():
-        line = line.strip()
-
-        if line.startswith("Classification:"):
-            classification = line.replace("Classification:", "").strip()
-
-        elif line.startswith("File:"):
-            target_file = line.replace("File:", "").strip()
-
-        elif line.startswith("Old:"):
-            old_memory = line.replace("Old:", "").strip()
-
-        elif line.startswith("Current:"):
-            current_memory = line.replace("Current:", "").strip()
-
-        elif line.startswith("New:"):
-            new_memory_text = line.replace("New:", "").strip()
-
-    if not classification:
-        classification = "NEW"
-
-    return {
-        "classification": classification,
-        "file": target_file,
-        "old": old_memory,
-        "current": current_memory,
-        "new": new_memory_text,
-        "raw": result,
-    }
+    if best_score >= DOUBLON_THRESHOLD:
+        return {"classification": "DOUBLON", "match": best_match, "score": best_score}
+    elif best_score >= UPDATE_THRESHOLD:
+        return {"classification": "UPDATE",  "match": best_match, "score": best_score}
+    else:
+        return {"classification": "NEW",     "match": None,       "score": best_score}
 
 
 # ======================
-# VALIDATION
+# VALIDATION HUMAINE
 # ======================
 
 validated = []
-rejected = []
-skipped = []
+rejected  = []
+skipped   = []
 
 print("\n===== MÉMOIRES À VALIDER =====\n")
 
 for index, memory in enumerate(memories, start=1):
     print(f"\n{index}. {memory}")
-
     choice = input("Accepter (o) | Refuser (n) | Passer (p) : ").lower().strip()
 
     if choice == "o":
@@ -358,68 +161,59 @@ for index, memory in enumerate(memories, start=1):
 # TRAITEMENT
 # ======================
 
-added_count = 0
-updated_count = 0
+existing_memories = get_existing_memories()
+
+added_count     = 0
+updated_count   = 0
 duplicate_count = 0
-old_info_count = 0
 category_counts = {}
 
 for memory in validated:
-    print(f"\nAnalyse mémoire : {memory}")
+    result = reconcile_local(memory, existing_memories)
+    classification = result["classification"]
+    match          = result["match"]
+    score          = result["score"]
 
-    reconciliation = reconcile_with_gemini(memory)
-
-    classification = reconciliation["classification"]
-    target_file = reconciliation["file"]
-    old_memory = reconciliation["old"]
-    current_memory = reconciliation["current"]
-    final_memory = reconciliation["new"]
+    print(f"\n→ {memory}")
+    print(f"  Classification : {classification}  (similarité : {score:.2f})")
 
     if classification == "DOUBLON":
+        print(f"  Doublon de : {match['memory']}")
         duplicate_count += 1
-        print("Doublon détecté, ignoré.")
         continue
 
-    if classification == "OLD_INFO":
-        old_info_count += 1
-        print("Ancienne information obsolète détectée, ignorée.")
-
-        if current_memory:
-            print(f"Mémoire actuelle conservée : {current_memory}")
-
-        continue
-
-    if classification == "UPDATE" and target_file and old_memory and final_memory:
-        print("\n===== UPDATE DÉTECTÉ =====")
-        print("Ancienne mémoire :")
-        print(old_memory)
-        print("\nNouvelle mémoire :")
-        print(final_memory)
-
-        confirm = input("\nRemplacer ? (o/n) : ").lower().strip()
+    if classification == "UPDATE":
+        print(f"\n  Ancienne mémoire : {match['memory']}")
+        print(f"  Fichier          : {match['file']}")
+        confirm = input("  Remplacer ? (o/n) : ").lower().strip()
 
         if confirm == "o":
-            success = update_memory_in_file(target_file, old_memory, final_memory)
+            new_text = input("  Nouvelle version (Entrée = garder telle quelle) : ").strip()
+            if not new_text:
+                new_text = memory
 
-            if success:
+            if update_memory_in_file(match["file"], match["memory"], new_text):
                 updated_count += 1
-                print("Mémoire mise à jour.")
+                # mettre à jour la liste locale pour les comparaisons suivantes
+                for m in existing_memories:
+                    if m["memory"] == match["memory"]:
+                        m["memory"] = new_text
+                print("  Mémoire mise à jour.")
             else:
-                print("Mise à jour impossible.")
-
+                print("  Mise à jour impossible.")
         else:
-            print("Mise à jour annulée.")
-
+            print("  Mise à jour annulée.")
         continue
 
-    category_file = detect_category(final_memory)
-    result = add_memory_to_file(final_memory, category_file)
+    # NEW
+    category_file = detect_category(memory)
+    outcome = add_memory_to_file(memory, category_file)
 
-    if result == "added":
+    if outcome == "added":
         added_count += 1
         category_counts[category_file] = category_counts.get(category_file, 0) + 1
-
-    elif result == "duplicate":
+        existing_memories.append({"file": category_file, "memory": memory})
+    elif outcome == "duplicate":
         duplicate_count += 1
 
 # ======================
@@ -427,44 +221,27 @@ for memory in validated:
 # ======================
 
 print("\n===== RÉSUMÉ =====")
-print(f"Acceptées par toi : {len(validated)}")
-print(f"Nouvelles ajoutées : {added_count}")
-print(f"Mises à jour : {updated_count}")
-print(f"Doublons ignorés : {duplicate_count}")
-print(f"Anciennes infos ignorées : {old_info_count}")
-print(f"Refusées : {len(rejected)}")
-print(f"Passées : {len(skipped)}")
+print(f"Acceptées      : {len(validated)}")
+print(f"Nouvelles      : {added_count}")
+print(f"Mises à jour   : {updated_count}")
+print(f"Doublons       : {duplicate_count}")
+print(f"Refusées       : {len(rejected)}")
+print(f"Passées        : {len(skipped)}")
+print(f"Appels API     : 0")
 
 if category_counts:
     print("\nClassement :")
-    for category, count in category_counts.items():
-        print(f"- {category} : {count}")
-
-print(f"\nDossier mémoire : {memory_dir}")
+    for cat, count in category_counts.items():
+        print(f"  - {cat} : {count}")
 
 # ======================
 # NETTOYAGE INBOX
 # ======================
 
-cleanup = input(
-    "\nVider l'Inbox maintenant ? (o/n) : "
-).lower().strip()
+cleanup = input("\nVider l'Inbox ? (o/n) : ").lower().strip()
 
 if cleanup == "o":
-
-    inbox_content = f"""# Mémoires à valider
-
-Date : À compléter
-
-"""
-
-    inbox_path.write_text(
-        inbox_content,
-        encoding="utf-8"
-    )
-
+    inbox_path.write_text("# Mémoires à valider\n\nDate : À compléter\n\n", encoding="utf-8")
     print("Inbox vidée.")
-
 else:
-
     print("Inbox conservée.")
