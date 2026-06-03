@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    body {
+      width: 280px;
+      font-family: sans-serif;
+      font-size: 13px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      margin: 0;
+      padding: 12px;
+    }
+    h2 { margin: 0 0 10px; font-size: 15px; }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      background: #313244;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+    }
+    .stat-label { color: #6c7086; }
+    .stat-value { font-weight: bold; color: #89b4fa; }
+    .pending { color: #f38ba8 !important; }
+    #status {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #6c7086;
+      text-align: center;
+    }
+    #status.ok  { color: #a6e3a1; }
+    #status.err { color: #f38ba8; }
+    .by-file { margin-top: 8px; }
+    .by-file-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #313244;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🧠 AI OS Memory</h2>
+  <div id="status">Connexion au serveur…</div>
+  <div id="stats"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
