@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
@@ -7,6 +8,7 @@ import chromadb
 import subprocess
 import numpy as np
 import sys
+import os
 
 # ======================
 # CONFIG
@@ -14,10 +16,17 @@ import sys
 
 app = FastAPI(title="AI OS Memory Server", version="1.0")
 
-model       = SentenceTransformer("all-MiniLM-L6-v2")
-chroma      = chromadb.PersistentClient(path="chroma_db")
+model       = None
+chroma      = None
 memory_dir  = Path("AI_OS/Memory")
-VENV_PYTHON = sys.executable  # même Python que le venv courant
+VENV_PYTHON = sys.executable
+
+
+@app.on_event("startup")
+def startup():
+    global model, chroma
+    model  = SentenceTransformer("all-MiniLM-L6-v2")
+    chroma = chromadb.PersistentClient(path="chroma_db")
 
 
 # ======================
@@ -146,3 +155,107 @@ def count_memories():
         pending = sum(1 for l in inbox.read_text(encoding="utf-8").splitlines() if l.startswith("- [ ] "))
 
     return {"total": total, "pending_review": pending, "by_file": counts}
+
+
+@app.get("/openapi-gpt.json", include_in_schema=False)
+def openapi_gpt():
+    """
+    Schéma OpenAPI simplifié pour ChatGPT Custom GPT Actions.
+    L'URL de base est injectée depuis la variable d'env NGROK_URL.
+    """
+    base_url = os.getenv("NGROK_URL", "http://localhost:8000")
+
+    schema = {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "AI OS Memory",
+            "version": "1.0",
+            "description": "Accès à la mémoire personnelle de l'utilisateur."
+        },
+        "servers": [{"url": base_url}],
+        "paths": {
+            "/memories/search": {
+                "get": {
+                    "operationId": "searchMemories",
+                    "summary": "Cherche dans les mémoires et notes personnelles",
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "in": "query",
+                            "required": True,
+                            "schema": {"type": "string"},
+                            "description": "Question ou mot-clé à rechercher"
+                        },
+                        {
+                            "name": "n",
+                            "in": "query",
+                            "required": False,
+                            "schema": {"type": "integer", "default": 5},
+                            "description": "Nombre de résultats"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Résultats de la recherche",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/memories/count": {
+                "get": {
+                    "operationId": "countMemories",
+                    "summary": "Nombre de mémoires stockées et en attente",
+                    "responses": {
+                        "200": {
+                            "description": "Compteurs de mémoires",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/extract": {
+                "post": {
+                    "operationId": "extractMemories",
+                    "summary": "Extrait les mémoires d'une conversation (1 appel Gemini)",
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "conversation": {
+                                            "type": "string",
+                                            "description": "Texte complet de la conversation"
+                                        }
+                                    },
+                                    "required": ["conversation"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Extraction réussie",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return JSONResponse(content=schema)
