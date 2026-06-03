@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
@@ -15,6 +16,17 @@ import os
 # ======================
 
 app = FastAPI(title="AI OS Memory Server", version="1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://chat.openai.com",
+        "https://claude.ai",
+        "https://gemini.google.com",
+    ],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 model       = None
 chroma      = None
