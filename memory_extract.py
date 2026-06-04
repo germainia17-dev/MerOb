@@ -2,6 +2,8 @@ from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from google import genai
+import subprocess
+import sys
 import os
 
 load_dotenv()
@@ -74,4 +76,19 @@ result = response.text
 
 inbox_path.write_text(result, encoding="utf-8")
 
-print("Mémoire générée ici : AI_OS/Inbox/memories_to_review.md")
+print("Extraction terminée → AI_OS/Inbox/memories_to_review.md")
+print("Lancement de la validation automatique…")
+
+# Validation automatique — zéro interaction, zéro appel API supplémentaire
+auto_review = Path(__file__).parent / "memory_auto_review.py"
+proc = subprocess.run(
+    [sys.executable, str(auto_review)],
+    capture_output=False,   # affiche les logs en temps réel
+    text=True,
+)
+
+if proc.returncode != 0:
+    print("Avertissement : la validation automatique a échoué (vérifier memory_auto_review.py).")
+else:
+    print("\nMémoires enregistrées dans AI_OS/Memory/")
+    print("Log lisible dans Obsidian : AI_OS/Inbox/dernier_ajout.md")
