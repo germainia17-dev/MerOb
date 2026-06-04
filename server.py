@@ -36,8 +36,10 @@ DEFAULT_VAULT = (
     "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
     "Documents/DigitBrain/DigitBrain/DIGITBRAIN"
 )
-memory_dir  = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
-VENV_PYTHON = sys.executable
+VAULT        = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
+# Depuis la Phase A : une note .md par mémoire dans Memories/
+MEMORIES_DIR = VAULT / "Memories"
+VENV_PYTHON  = sys.executable
 
 
 @app.on_event("startup")
@@ -48,23 +50,36 @@ def startup():
 
 
 # ======================
-# LECTURE FORMAT TABLEAU
+# LECTURE DES NOTES INDIVIDUELLES (Memories/)
 # ======================
 
-def parse_note_rows(file_path):
-    """Extrait les mémoires d'une note au format tableau (Date | Mémoire)."""
-    rows = []
+def read_memory_note(file_path):
+    """Extrait le texte d'une mémoire depuis une note individuelle.
+
+    Format de note (Phase A) :
+        > Texte de la mémoire
+        **Catégorie :** [[...]]
+        ...
+    Le texte de la mémoire est la première ligne commençant par '> '.
+    """
     for line in file_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) < 2:
-            continue
-        if cells[0].lower() == "date" or set(cells[0]) <= {"-", ":", " "}:
-            continue
-        rows.append(cells[1])  # le texte de la mémoire
-    return rows
+        if line.startswith(">"):
+            return line.lstrip("> ").strip()
+    return ""
+
+
+def load_all_memories():
+    """Charge toutes les mémoires depuis Memories/*.md.
+    Retourne une liste de {file, content}."""
+    memories = []
+    if not MEMORIES_DIR.exists():
+        return memories
+    for file in MEMORIES_DIR.glob("*.md"):
+        text = read_memory_note(file)
+        if text:
+            memories.append({"file": file.name, "content": text})
+    return memories
 
 
 # ======================
@@ -103,13 +118,8 @@ def search_memories(q: str = Query(..., description="Question ou mot-clé"), n: 
     except Exception:
         pass  # collection vide ou absente → on continue
 
-    # --- 2. Recherche vectorielle dans les mémoires validées ---
-    memories = []
-
-    for file in memory_dir.rglob("*.md"):
-        for text in parse_note_rows(file):
-            if text:
-                memories.append({"file": file.name, "content": text})
+    # --- 2. Recherche vectorielle dans les mémoires (Memories/*.md) ---
+    memories = load_all_memories()
 
     if memories:
         query_emb    = model.encode([q])
@@ -174,24 +184,26 @@ def extract_memories(body: ExtractRequest):
 
 @app.get("/memories/count")
 def count_memories():
-    """Retourne le nombre de mémoires par fichier + le total à valider."""
-    counts = {}
-    total  = 0
+    """Retourne le nombre total de mémoires + la répartition par catégorie."""
+    memories = load_all_memories()
+    total    = len(memories)
 
-    for file in memory_dir.rglob("*.md"):
-        n = len(parse_note_rows(file))
-        if n:
-            counts[file.name] = n
-            total += n
+    # Répartition par catégorie (lue depuis les hubs Categories/)
+    by_category = {}
+    categories_dir = VAULT / "Categories"
+    if categories_dir.exists():
+        for hub in categories_dir.glob("*.md"):
+            n = sum(1 for l in hub.read_text(encoding="utf-8").splitlines()
+                    if l.strip().startswith("- [["))
+            by_category[hub.stem] = n
 
     # Mémoires en attente de validation
     inbox = Path("AI_OS/Inbox/memories_to_review.md")
     pending = 0
-
     if inbox.exists():
         pending = sum(1 for l in inbox.read_text(encoding="utf-8").splitlines() if l.startswith("- [ ] "))
 
-    return {"total": total, "pending_review": pending, "by_file": counts}
+    return {"total": total, "pending_review": pending, "by_category": by_category}
 
 
 @app.get("/openapi-gpt.json", include_in_schema=False)
