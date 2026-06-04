@@ -30,7 +30,13 @@ app.add_middleware(
 
 model       = None
 chroma      = None
-memory_dir  = Path("AI_OS/Memory")
+
+# Les mémoires vivent maintenant directement dans le vault Obsidian DigitBrain.
+DEFAULT_VAULT = (
+    "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
+    "Documents/DigitBrain/DigitBrain/DIGITBRAIN"
+)
+memory_dir  = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
 VENV_PYTHON = sys.executable
 
 
@@ -80,7 +86,7 @@ def search_memories(q: str = Query(..., description="Question ou mot-clé"), n: 
     # --- 2. Recherche vectorielle dans les mémoires validées ---
     memories = []
 
-    for file in memory_dir.glob("*.md"):
+    for file in memory_dir.rglob("*.md"):
         for line in file.read_text(encoding="utf-8").splitlines():
             if line.startswith("- "):
                 text = line[2:].strip()
@@ -154,10 +160,11 @@ def count_memories():
     counts = {}
     total  = 0
 
-    for file in memory_dir.glob("*.md"):
+    for file in memory_dir.rglob("*.md"):
         n = sum(1 for l in file.read_text(encoding="utf-8").splitlines() if l.startswith("- "))
-        counts[file.name] = n
-        total += n
+        if n:
+            counts[file.name] = n
+            total += n
 
     # Mémoires en attente de validation
     inbox = Path("AI_OS/Inbox/memories_to_review.md")

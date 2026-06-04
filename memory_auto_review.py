@@ -1,13 +1,16 @@
 """
 memory_auto_review.py
 ─────────────────────
-Traite automatiquement les mémoires extraites :
-  - NEW      → ajoutées directement dans AI_OS/Memory/[Catégorie].md
-  - DOUBLON  → ignorées silencieusement
-  - UPDATE   → l'ancienne ligne est remplacée automatiquement
+Traite automatiquement les mémoires extraites et les écrit
+DIRECTEMENT dans le vault Obsidian DigitBrain.
 
+  - NEW      → ajoutée dans la bonne note du vault
+  - DOUBLON  → ignorée silencieusement
+  - UPDATE   → l'ancienne ligne est remplacée
+
+Classement par similarité sémantique vers les notes existantes du vault.
 Zéro appel API. Zéro interaction humaine.
-Un log est écrit dans AI_OS/Inbox/dernier_ajout.md (lisible dans Obsidian).
+Un log lisible est écrit dans AI_OS/Inbox/dernier_ajout.md.
 """
 
 from pathlib import Path
@@ -15,6 +18,7 @@ from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import os
 import sys
 
 # ======================
@@ -24,60 +28,58 @@ import sys
 DOUBLON_THRESHOLD = 0.85
 UPDATE_THRESHOLD  = 0.60
 
+# Vault Obsidian (surchargeable via la variable d'env OBSIDIAN_VAULT)
+DEFAULT_VAULT = (
+    "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
+    "Documents/DigitBrain/DigitBrain/DIGITBRAIN"
+)
+VAULT = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
+
 inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
-memory_dir = Path("AI_OS/Memory")
 log_path   = Path("AI_OS/Inbox/dernier_ajout.md")
 
-memory_dir.mkdir(parents=True, exist_ok=True)
-
 # ======================
-# CATÉGORIES SÉMANTIQUES
-# Chaque catégorie est décrite en langage naturel.
+# CATÉGORIES = NOTES DU VAULT
+# Chaque note existante du vault est décrite en langage naturel.
 # La mémoire est comparée vectoriellement à chaque description.
-# Pas de mots-clés hardcodés — robuste aux reformulations.
+# La clé est le chemin RELATIF dans le vault.
 # ======================
 
 CATEGORIES = {
-    "Identity.md": (
+    "05 Identity.md": (
         "identité personnelle, nom, âge, ville, école, lycée, situation familiale, "
-        "apparence physique, style vestimentaire, personnalité, profil"
+        "apparence physique, taille, style vestimentaire, coupe de cheveux, personnalité, "
+        "loisirs, passions, ski, snowboard, gaming, jeux vidéo, musique, rap, hobby, "
+        "habitudes, routine, préférence personnelle"
     ),
-    "Projects.md": (
-        "projet personnel, développement logiciel, construction, prototype, "
-        "impression 3D, prothèse, application, pipeline, AI OS, démo, VivaTech"
+    "03 Projects.md": (
+        "projet personnel, développement, construction, prototype, prothèse, "
+        "impression 3D, AI OS, assistant IA, application, pipeline, démo, "
+        "objectif, ambition, but à atteindre, certification, événement futur, VivaTech, "
+        "ce que la personne veut accomplir"
     ),
-    "Goals.md": (
-        "objectif, ambition, motivation, souhait, aspiration, but à atteindre, "
-        "certification, événement futur, ce que la personne veut accomplir"
+    "04 Thinking.md": (
+        "réflexion, décision prise, choix, idée, piste à explorer, questionnement, "
+        "brainstorming, préoccupation, analyse, considération, stratégie, planification"
     ),
-    "Tools.md": (
-        "outil, logiciel, technologie, langage de programmation, framework, "
-        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, ChatGPT, Raspberry Pi, "
-        "n8n, Micro:bit, Adalo, VS Code"
+    "01 Learnig.md": (
+        "connaissance acquise, concept appris, apprentissage, compréhension, leçon, "
+        "RAG, embeddings, vecteurs, cosine similarity, intelligence artificielle, "
+        "notion technique, principe d'ingénierie"
     ),
-    "Knowledge.md": (
-        "connaissance acquise, concept appris, compréhension, apprentissage, "
-        "RAG, embeddings, vecteurs, cosine similarity, modèle de langage, IA"
+    "Intelligence atrificial/Outils.md": (
+        "outil, logiciel, technologie, langage de programmation, framework, script, "
+        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, Claude Code, ChatGPT, "
+        "Raspberry Pi, n8n, Micro:bit, Adalo, VS Code, ContextOptimizer"
     ),
-    "Decisions.md": (
-        "décision prise, choix effectué, validation, intégration choisie, "
-        "option retenue, préférence confirmée"
+    "06 Mistakes.md": (
+        "erreur, point faible, difficulté, défaut, problème personnel, mauvaise habitude, "
+        "éparpillement, procrastination, distraction, manque de suivi, "
+        "difficulté à terminer, ce qui ne va pas"
     ),
-    "Ideas.md": (
-        "idée, piste à explorer, fonctionnalité à ajouter, amélioration possible, "
-        "concept à tester, inspiration, brainstorming"
-    ),
-    "Tasks.md": (
-        "tâche à faire, todo, action à réaliser, corriger, tester, implémenter, "
-        "déployer, à compléter, prochaine étape"
-    ),
-    "Interests.md": (
-        "loisir, intérêt, passion, hobby, jeux vidéo, sport, musique, lecture, "
-        "gaming, réseaux sociaux, activité personnelle"
-    ),
-    "Habits.md": (
-        "habitude, routine, comportement récurrent, façon de travailler, "
-        "préférence de travail, organisation personnelle, méthode"
+    "07 Sources.md": (
+        "source, référence, lien, article, vidéo, documentation, ressource externe, "
+        "citation, site web, bibliographie"
     ),
 }
 
@@ -89,8 +91,6 @@ _category_descs = list(CATEGORIES.values())
 # ======================
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
-
-# Encodage des catégories (une seule fois, après chargement du modèle)
 _category_embs = model.encode(_category_descs)
 
 # ======================
@@ -100,6 +100,10 @@ _category_embs = model.encode(_category_descs)
 if not inbox_path.exists():
     print("Aucune inbox trouvée.")
     sys.exit(0)
+
+if not VAULT.exists():
+    print(f"Erreur : vault introuvable → {VAULT}")
+    sys.exit(1)
 
 content = inbox_path.read_text(encoding="utf-8")
 raw_memories = []
@@ -115,49 +119,56 @@ if not raw_memories:
     sys.exit(0)
 
 print(f"\n→ {len(raw_memories)} mémoire(s) détectées dans l'Inbox")
+print(f"→ Vault : {VAULT}")
 
 # ======================
 # OUTILS
 # ======================
 
 def get_existing_memories():
+    """Lit les mémoires déjà présentes dans les notes du vault."""
     existing = []
-    for file in memory_dir.glob("*.md"):
-        for line in file.read_text(encoding="utf-8").splitlines():
+    for rel_path in _category_keys:
+        file_path = VAULT / rel_path
+        if not file_path.exists():
+            continue
+        for line in file_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("- "):
                 memory = line[2:].strip()
                 if memory:
-                    existing.append({"file": file.name, "memory": memory})
+                    existing.append({"file": rel_path, "memory": memory})
     return existing
 
 
 def detect_category(memory: str) -> str:
-    """Classe la mémoire par similarité sémantique avec les descriptions de catégories."""
+    """Classe la mémoire par similarité sémantique vers une note du vault.
+    Renvoie toujours la note la plus proche (jamais 'Other')."""
     memory_emb = model.encode([memory])
     scores     = cosine_similarity(memory_emb, _category_embs)[0]
     best_idx   = int(np.argmax(scores))
-    best_score = float(scores[best_idx])
-
-    if best_score < 0.20:
-        return "Other.md"
-
     return _category_keys[best_idx]
 
 
-def add_memory(memory: str, filename: str) -> str:
-    file_path = memory_dir / filename
-    title     = filename.replace(".md", "")
-    existing  = file_path.read_text(encoding="utf-8") if file_path.exists() else f"# {title}\n\n"
+def add_memory(memory: str, rel_path: str) -> str:
+    file_path = VAULT / rel_path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    title    = Path(rel_path).stem
+    existing = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
 
     if f"- {memory}" in existing:
         return "duplicate"
+
+    # Si la note est vide, on lui donne un titre propre
+    if not existing.strip():
+        existing = f"# {title}\n\n"
 
     file_path.write_text(existing.rstrip("\n") + f"\n- {memory}\n", encoding="utf-8")
     return "added"
 
 
-def update_memory(filename: str, old: str, new: str) -> bool:
-    file_path = memory_dir / filename
+def update_memory(rel_path: str, old: str, new: str) -> bool:
+    file_path = VAULT / rel_path
     if not file_path.exists():
         return False
 
@@ -207,7 +218,7 @@ for memory in raw_memories:
 
     if classification == "DOUBLON":
         duplicate_list.append(memory)
-        print(f"  [DOUBLON]  {memory[:80]}")
+        print(f"  [DOUBLON]  {memory[:70]}")
         continue
 
     if classification == "UPDATE":
@@ -217,9 +228,8 @@ for memory in raw_memories:
             for m in existing_memories:
                 if m["memory"] == match["memory"]:
                     m["memory"] = memory
-            print(f"  [UPDATE]   {memory[:80]}")
+            print(f"  [UPDATE]   {memory[:70]}")
         else:
-            # Fallback → ajouter comme NEW
             cat     = detect_category(memory)
             outcome = add_memory(memory, cat)
             if outcome == "added":
@@ -236,10 +246,10 @@ for memory in raw_memories:
         added_list.append({"memory": memory, "file": cat})
         existing_memories.append({"file": cat, "memory": memory})
         category_counts[cat] = category_counts.get(cat, 0) + 1
-        print(f"  [NEW → {cat.replace('.md','')}]  {memory[:80]}")
+        print(f"  [NEW → {Path(cat).stem}]  {memory[:70]}")
     else:
         duplicate_list.append(memory)
-        print(f"  [IGNORÉE]  {memory[:80]}")
+        print(f"  [IGNORÉE]  {memory[:70]}")
 
 
 # ======================
@@ -261,14 +271,14 @@ if added_list:
     lines.append("## ✅ Nouvelles mémoires")
     lines.append("")
     for item in added_list:
-        lines.append(f"- **{item['file'].replace('.md','')}** — {item['memory']}")
+        lines.append(f"- **{Path(item['file']).stem}** — {item['memory']}")
     lines.append("")
 
 if updated_list:
     lines.append("## 🔄 Mises à jour")
     lines.append("")
     for item in updated_list:
-        lines.append(f"- **{item['file'].replace('.md','')}** — {item['new']}")
+        lines.append(f"- **{Path(item['file']).stem}** — {item['new']}")
         lines.append(f"  *(remplace : {item['old']})*")
     lines.append("")
 
@@ -293,9 +303,9 @@ print(f"Doublons       : {len(duplicate_list)}")
 print(f"Appels API     : 0")
 
 if category_counts:
-    print("\nClassement par catégorie :")
+    print("\nClassement dans le vault :")
     for cat, count in category_counts.items():
-        print(f"  - {cat} : {count}")
+        print(f"  - {Path(cat).stem} : {count}")
 
-print(f"\nLog Obsidian   : AI_OS/Inbox/dernier_ajout.md")
-print("Mémoires dans  : AI_OS/Memory/")
+print(f"\nNotes mises à jour dans Obsidian (DigitBrain) ✅")
+print(f"Log : AI_OS/Inbox/dernier_ajout.md")
