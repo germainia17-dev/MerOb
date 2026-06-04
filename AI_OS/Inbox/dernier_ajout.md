@@ -1,23 +1,16 @@
-# Dernier ajout — 2026-06-04 17:49
+# Dernier ajout — 2026-06-04 18:30
 
-**Traitées** : 10  |  **Ajoutées** : 8  |  **Mises à jour** : 1  |  **Doublons ignorés** : 1
+**Traitées** : 4  |  **Ajoutées** : 1  |  **Mises à jour** : 3  |  **Doublons ignorés** : 0
 
 ## ✅ Nouvelles mémoires
 
-- **05 Identity** — **Identité :**
-- **03 Projects** — **Objectifs :**
-- **05 Identity** — **Préférences de travail & Tendances :**
-- **04 Thinking** — **Outils utilisés :**
-- **01 Learnig** — **Connaissances durables :**
-- **04 Thinking** — **Décisions importantes :**
-- **06 Mistakes** — **Tâches utiles :**
-- **06 Mistakes** — ...
+- **07 Sources** — **Outils autorisés (pour l'IA) :** Google Drive, recherche web.
 
 ## 🔄 Mises à jour
 
-- **06 Mistakes** — **Projets en cours :**
-  *(remplace : **Questionnement :** Difficulté à terminer les projets commencés.)*
-
-## ⏭ Doublons ignorés
-
-- ...
+- **01 Learnig** — **Projet/Tâche :** L'utilisateur a du code nécessitant un examen et des conseils.
+  *(remplace : L'utilisateur souhaite créer un outil pour résoudre le problème de la gestion des tokens avec Claude (notamment Claude Code).)*
+- **01 Learnig** — **Objectif :** Obtenir des conseils et une analyse sur son code.
+  *(remplace : **Projet/Tâche :** L'utilisateur a du code nécessitant un examen et des conseils.)*
+- **04 Thinking** — **Décision importante :** Ne pas utiliser d'outil d'analyse pour cette tâche spécifique.
+  *(remplace : L'utilisateur a décidé de toujours valider les mémoires avant leur intégration.)*
