@@ -32,6 +32,10 @@ def main():
             print("\nConfiguration nécessaire pour continuer. Relance : python run.py")
             return
 
+    # Clé Gemini : nécessaire pour l'extraction (pas pour la recherche/réinjection)
+    if config.get_api_key() is None:
+        config.setup_api_key()
+
     print(f"\n✓ Vault des mémoires : {vault}")
     print("→ Serveur AI OS : http://localhost:8000")
     print("  (garde cette fenêtre ouverte ; Ctrl+C pour arrêter)\n")

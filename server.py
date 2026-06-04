@@ -20,6 +20,7 @@ app = FastAPI(title="AI OS Memory Server", version="1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://chatgpt.com",
         "https://chat.openai.com",
         "https://claude.ai",
         "https://gemini.google.com",

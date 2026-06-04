@@ -146,5 +146,58 @@ NO_VAULT_MSG = (
 )
 
 
+# ======================
+# CLÉ API GEMINI (.env)
+# ======================
+
+ENV_FILE = Path(__file__).parent / ".env"
+
+
+def get_api_key() -> str | None:
+    """Lit GEMINI_API_KEY depuis .env (ou l'environnement)."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ENV_FILE)
+    except Exception:
+        pass
+    return os.getenv("GEMINI_API_KEY")
+
+
+def save_api_key(key: str) -> None:
+    """Écrit / met à jour GEMINI_API_KEY dans .env."""
+    lines, found = [], False
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            if line.startswith("GEMINI_API_KEY"):
+                lines.append(f"GEMINI_API_KEY={key}")
+                found = True
+            else:
+                lines.append(line)
+    if not found:
+        lines.append(f"GEMINI_API_KEY={key}")
+    ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def setup_api_key() -> str | None:
+    """Configuration interactive de la clé Gemini."""
+    print("\n=== Clé API Gemini (pour l'extraction des mémoires) ===")
+    print("Gratuite en 30 secondes : https://aistudio.google.com/apikey")
+    key = input("Colle ta clé Gemini (Entrée pour configurer plus tard) : ").strip()
+    if not key:
+        print("→ Tu pourras l'ajouter plus tard dans le fichier .env")
+        return None
+    save_api_key(key)
+    print("✓ Clé enregistrée dans .env")
+    return key
+
+
+NO_API_KEY_MSG = (
+    "Clé API Gemini manquante (nécessaire pour l'extraction).\n"
+    "  → Obtiens-en une (gratuit) : https://aistudio.google.com/apikey\n"
+    "  → Puis lance :  python config.py   (ou ajoute GEMINI_API_KEY=... dans .env)"
+)
+
+
 if __name__ == "__main__":
     interactive_setup()
+    setup_api_key()

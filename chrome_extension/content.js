@@ -13,7 +13,7 @@ let panel, searchTimeout;
 
 function getSite() {
   const h = location.hostname;
-  if (h.includes("openai.com"))  return "chatgpt";
+  if (h.includes("chatgpt.com") || h.includes("openai.com")) return "chatgpt";
   if (h.includes("claude.ai"))   return "claude";
   if (h.includes("gemini"))      return "gemini";
   return null;

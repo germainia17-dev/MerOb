@@ -1,17 +1,16 @@
 from pathlib import Path
 from datetime import datetime
-from dotenv import load_dotenv
 from google import genai
 import subprocess
 import sys
-import os
 
-load_dotenv()
+import config
 
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = config.get_api_key()
 
 if not api_key:
-    raise ValueError("Erreur : GEMINI_API_KEY manquante dans le fichier .env")
+    print(config.NO_API_KEY_MSG)
+    sys.exit(1)
 
 client = genai.Client(api_key=api_key)
 
@@ -90,5 +89,5 @@ proc = subprocess.run(
 if proc.returncode != 0:
     print("Avertissement : la validation automatique a échoué (vérifier memory_auto_review.py).")
 else:
-    print("\nMémoires enregistrées dans AI_OS/Memory/")
+    print("\nMémoires enregistrées dans ton vault Obsidian (Memories/ + Categories/).")
     print("Log lisible dans Obsidian : AI_OS/Inbox/dernier_ajout.md")
