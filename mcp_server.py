@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
+from embeddings import Embedder
 from sklearn.metrics.pairwise import cosine_similarity
 import chromadb
 import subprocess
@@ -12,7 +12,7 @@ import sys
 # ======================
 
 mcp         = FastMCP("AI OS Memory")
-model       = SentenceTransformer("all-MiniLM-L6-v2")
+model       = Embedder()
 chroma      = chromadb.PersistentClient(path=str(Path(__file__).parent / "chroma_db"))
 memory_dir  = Path(__file__).parent / "AI_OS/Memory"
 VENV_PYTHON = sys.executable

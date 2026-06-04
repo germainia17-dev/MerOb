@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
+from embeddings import Embedder
 from sklearn.metrics.pairwise import cosine_similarity
 import chromadb
 import subprocess
@@ -44,7 +44,7 @@ VENV_PYTHON  = sys.executable
 @app.on_event("startup")
 def startup():
     global model, chroma
-    model  = SentenceTransformer("all-MiniLM-L6-v2")
+    model  = Embedder()
     chroma = chromadb.PersistentClient(path="chroma_db")
 
 

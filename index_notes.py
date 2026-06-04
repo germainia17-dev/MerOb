@@ -1,8 +1,8 @@
 from pathlib import Path
 import chromadb
-from sentence_transformers import SentenceTransformer
+from embeddings import Embedder
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = Embedder()
 
 client = chromadb.PersistentClient(path="chroma_db")
 

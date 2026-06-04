@@ -23,7 +23,7 @@ Zéro appel API. Zéro interaction humaine.
 
 from pathlib import Path
 from datetime import datetime
-from sentence_transformers import SentenceTransformer
+from embeddings import Embedder
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
@@ -134,7 +134,7 @@ DISCOVERED = load_discovered()
 # CHARGEMENT MODÈLE
 # ======================
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = Embedder()
 
 
 def build_category_index():
