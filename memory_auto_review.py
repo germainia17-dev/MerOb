@@ -31,10 +31,67 @@ log_path   = Path("AI_OS/Inbox/dernier_ajout.md")
 memory_dir.mkdir(parents=True, exist_ok=True)
 
 # ======================
+# CATÉGORIES SÉMANTIQUES
+# Chaque catégorie est décrite en langage naturel.
+# La mémoire est comparée vectoriellement à chaque description.
+# Pas de mots-clés hardcodés — robuste aux reformulations.
+# ======================
+
+CATEGORIES = {
+    "Identity.md": (
+        "identité personnelle, nom, âge, ville, école, lycée, situation familiale, "
+        "apparence physique, style vestimentaire, personnalité, profil"
+    ),
+    "Projects.md": (
+        "projet personnel, développement logiciel, construction, prototype, "
+        "impression 3D, prothèse, application, pipeline, AI OS, démo, VivaTech"
+    ),
+    "Goals.md": (
+        "objectif, ambition, motivation, souhait, aspiration, but à atteindre, "
+        "certification, événement futur, ce que la personne veut accomplir"
+    ),
+    "Tools.md": (
+        "outil, logiciel, technologie, langage de programmation, framework, "
+        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, ChatGPT, Raspberry Pi, "
+        "n8n, Micro:bit, Adalo, VS Code"
+    ),
+    "Knowledge.md": (
+        "connaissance acquise, concept appris, compréhension, apprentissage, "
+        "RAG, embeddings, vecteurs, cosine similarity, modèle de langage, IA"
+    ),
+    "Decisions.md": (
+        "décision prise, choix effectué, validation, intégration choisie, "
+        "option retenue, préférence confirmée"
+    ),
+    "Ideas.md": (
+        "idée, piste à explorer, fonctionnalité à ajouter, amélioration possible, "
+        "concept à tester, inspiration, brainstorming"
+    ),
+    "Tasks.md": (
+        "tâche à faire, todo, action à réaliser, corriger, tester, implémenter, "
+        "déployer, à compléter, prochaine étape"
+    ),
+    "Interests.md": (
+        "loisir, intérêt, passion, hobby, jeux vidéo, sport, musique, lecture, "
+        "gaming, réseaux sociaux, activité personnelle"
+    ),
+    "Habits.md": (
+        "habitude, routine, comportement récurrent, façon de travailler, "
+        "préférence de travail, organisation personnelle, méthode"
+    ),
+}
+
+_category_keys  = list(CATEGORIES.keys())
+_category_descs = list(CATEGORIES.values())
+
+# ======================
 # CHARGEMENT MODÈLE
 # ======================
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# Encodage des catégories (une seule fois, après chargement du modèle)
+_category_embs = model.encode(_category_descs)
 
 # ======================
 # LECTURE INBOX
@@ -75,26 +132,16 @@ def get_existing_memories():
 
 
 def detect_category(memory: str) -> str:
-    text = memory.lower()
+    """Classe la mémoire par similarité sémantique avec les descriptions de catégories."""
+    memory_emb = model.encode([memory])
+    scores     = cosine_similarity(memory_emb, _category_embs)[0]
+    best_idx   = int(np.argmax(scores))
+    best_score = float(scores[best_idx])
 
-    if any(w in text for w in ["décidé", "décision", "choix", "choisi", "validation", "intégration"]):
-        return "Decisions.md"
-    if any(w in text for w in ["idée", "ajouter", "fonctionnalité", "piste", "améliorer"]):
-        return "Ideas.md"
-    if any(w in text for w in ["a appris", "comprend", "connaît", "concept", "rag", "embedding", "vecteur"]):
-        return "Knowledge.md"
-    if any(w in text for w in ["doit faire", "à faire", "tâche", "todo", "corriger", "tester"]):
-        return "Tasks.md"
-    if any(w in text for w in ["projet", "développe", "ai os", "construit", "pipeline"]):
-        return "Projects.md"
-    if any(w in text for w in ["obsidian", "gemini", "claude", "chatgpt", "outil", "python", "vscode", "fastapi", "chroma"]):
-        return "Tools.md"
-    if any(w in text for w in ["s'appelle", "âgé", "ans", "lycée", "germain", "sti2d", "macbook", "ordinateur"]):
-        return "Identity.md"
-    if any(w in text for w in ["objectif", "veut", "souhaite", "but", "ambition"]):
-        return "Goals.md"
+    if best_score < 0.20:
+        return "Other.md"
 
-    return "Other.md"
+    return _category_keys[best_idx]
 
 
 def add_memory(memory: str, filename: str) -> str:
@@ -148,16 +195,15 @@ def reconcile(new_memory: str, existing: list) -> dict:
 
 existing_memories = get_existing_memories()
 
-added_list     = []
-updated_list   = []
-duplicate_list = []
+added_list      = []
+updated_list    = []
+duplicate_list  = []
 category_counts = {}
 
 for memory in raw_memories:
     result         = reconcile(memory, existing_memories)
     classification = result["classification"]
     match          = result["match"]
-    score          = result["score"]
 
     if classification == "DOUBLON":
         duplicate_list.append(memory)
@@ -168,14 +214,13 @@ for memory in raw_memories:
         ok = update_memory(match["file"], match["memory"], memory)
         if ok:
             updated_list.append({"new": memory, "old": match["memory"], "file": match["file"]})
-            # Mettre à jour la liste locale pour les comparaisons suivantes
             for m in existing_memories:
                 if m["memory"] == match["memory"]:
                     m["memory"] = memory
             print(f"  [UPDATE]   {memory[:80]}")
         else:
-            # Impossible de mettre à jour → ajouter comme NEW
-            cat    = detect_category(memory)
+            # Fallback → ajouter comme NEW
+            cat     = detect_category(memory)
             outcome = add_memory(memory, cat)
             if outcome == "added":
                 added_list.append({"memory": memory, "file": cat})
