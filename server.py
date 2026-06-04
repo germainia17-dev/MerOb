@@ -48,6 +48,26 @@ def startup():
 
 
 # ======================
+# LECTURE FORMAT TABLEAU
+# ======================
+
+def parse_note_rows(file_path):
+    """Extrait les mémoires d'une note au format tableau (Date | Mémoire)."""
+    rows = []
+    for line in file_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        if cells[0].lower() == "date" or set(cells[0]) <= {"-", ":", " "}:
+            continue
+        rows.append(cells[1])  # le texte de la mémoire
+    return rows
+
+
+# ======================
 # ROUTES
 # ======================
 
@@ -87,11 +107,9 @@ def search_memories(q: str = Query(..., description="Question ou mot-clé"), n: 
     memories = []
 
     for file in memory_dir.rglob("*.md"):
-        for line in file.read_text(encoding="utf-8").splitlines():
-            if line.startswith("- "):
-                text = line[2:].strip()
-                if text:
-                    memories.append({"file": file.name, "content": text})
+        for text in parse_note_rows(file):
+            if text:
+                memories.append({"file": file.name, "content": text})
 
     if memories:
         query_emb    = model.encode([q])
@@ -161,7 +179,7 @@ def count_memories():
     total  = 0
 
     for file in memory_dir.rglob("*.md"):
-        n = sum(1 for l in file.read_text(encoding="utf-8").splitlines() if l.startswith("- "))
+        n = len(parse_note_rows(file))
         if n:
             counts[file.name] = n
             total += n
