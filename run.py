@@ -12,6 +12,13 @@ Point d'entrée unique d'AI OS (macOS / Windows / Linux).
 Plus besoin de launchd : un simple `python run.py` suffit sur tous les OS.
 """
 
+import sys
+
+if sys.version_info < (3, 10):
+    print(f"AI OS requiert Python 3.10 ou plus récent (détecté : {sys.version.split()[0]}).")
+    print("Installe une version récente depuis https://www.python.org/downloads/")
+    sys.exit(1)
+
 import config
 
 

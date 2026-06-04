@@ -1,4 +1,5 @@
 # AI OS — dépendances (chemin critique, sans PyTorch)
+# Python 3.10+ requis.
 # Embeddings via fastembed (ONNX, ~50 Mo) au lieu de sentence-transformers (~2 Go).
 
 fastapi>=0.136
