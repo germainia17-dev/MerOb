@@ -91,58 +91,87 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/memories/search")
-def search_memories(q: str = Query(..., description="Question ou mot-clé"), n: int = 5):
+RELEVANCE_THRESHOLD = 0.30  # en-dessous → pas assez pertinent pour la réinjection
+
+
+def ranked_results(q: str, n: int):
+    """Classe TOUTES les sources (mémoires + notes ChromaDB) par pertinence réelle.
+
+    Toutes les sources sont scorées par similarité cosinus avec la requête,
+    puis fusionnées et triées globalement. Plus de résultats "score=null"
+    qui passaient devant les vraies mémoires pertinentes.
     """
-    Cherche dans :
-    - ChromaDB (notes vectorisées)
-    - AI_OS/Memory/*.md (mémoires validées)
-    Retourne les N résultats les plus pertinents. Zéro appel API.
-    """
+    query_emb = model.encode([q])
+    candidates = []
 
-    results = []
-
-    # --- 1. Recherche dans ChromaDB (notes) ---
-    try:
-        collection    = chroma.get_collection("notes")
-        query_emb     = model.encode(q).tolist()
-        chroma_result = collection.query(query_embeddings=[query_emb], n_results=min(n, 3))
-
-        for doc, meta_id in zip(chroma_result["documents"][0], chroma_result["ids"][0]):
-            results.append({
-                "source":  "notes",
-                "file":    meta_id,
-                "content": doc,
-                "score":   None,
+    # --- 1. Mémoires (Memories/*.md) — la source principale ---
+    memories = load_all_memories()
+    if memories:
+        texts  = [m["content"] for m in memories]
+        embs   = model.encode(texts)
+        scores = cosine_similarity(query_emb, embs)[0]
+        for m, s in zip(memories, scores):
+            candidates.append({
+                "source":  "memory",
+                "file":    m["file"],
+                "content": m["content"],
+                "score":   float(s),
             })
+
+    # --- 2. Notes ChromaDB (contexte secondaire), scorées de la même façon ---
+    try:
+        collection = chroma.get_collection("notes")
+        data = collection.get(include=["documents"])
+        docs = data.get("documents") or []
+        ids  = data.get("ids") or []
+        if docs:
+            embs   = model.encode(docs)
+            scores = cosine_similarity(query_emb, embs)[0]
+            for doc, _id, s in zip(docs, ids, scores):
+                candidates.append({
+                    "source":  "notes",
+                    "file":    _id,
+                    "content": doc,
+                    "score":   float(s),
+                })
     except Exception:
         pass  # collection vide ou absente → on continue
 
-    # --- 2. Recherche vectorielle dans les mémoires (Memories/*.md) ---
-    memories = load_all_memories()
+    # Tri global par pertinence + seuil + top N
+    candidates.sort(key=lambda c: c["score"], reverse=True)
+    out = []
+    for c in candidates:
+        if c["score"] < RELEVANCE_THRESHOLD:
+            break
+        c["score"] = round(c["score"], 3)
+        out.append(c)
+        if len(out) >= n:
+            break
+    return out
 
-    if memories:
-        query_emb    = model.encode([q])
-        memory_texts = [m["content"] for m in memories]
-        memory_embs  = model.encode(memory_texts)
-        scores       = cosine_similarity(query_emb, memory_embs)[0]
 
-        # Top N mémoires par score
-        top_indices = np.argsort(scores)[::-1][:n]
-
-        for idx in top_indices:
-            if scores[idx] > 0.3:  # seuil minimal de pertinence
-                results.append({
-                    "source":  "memory",
-                    "file":    memories[idx]["file"],
-                    "content": memories[idx]["content"],
-                    "score":   round(float(scores[idx]), 3),
-                })
-
-    if not results:
-        return {"query": q, "results": [], "total": 0}
-
+@app.get("/memories/search")
+def search_memories(q: str = Query(..., description="Question ou mot-clé"), n: int = 5):
+    """Cherche dans les mémoires + notes, triées par pertinence. Zéro appel API."""
+    results = ranked_results(q, n)
     return {"query": q, "results": results, "total": len(results)}
+
+
+@app.get("/memories/context")
+def memory_context(q: str = Query(..., description="Sujet du message en cours"), n: int = 5):
+    """Renvoie un bloc de contexte prêt à injecter dans un prompt.
+
+    Utilisé pour la réinjection : l'IA reçoit les mémoires pertinentes
+    formatées en texte, sans avoir à les reformuler.
+    """
+    results = ranked_results(q, n)
+    if not results:
+        return {"query": q, "context": "", "count": 0}
+
+    lines = ["[Mémoires personnelles pertinentes]"]
+    for r in results:
+        lines.append(f"- {r['content']}")
+    return {"query": q, "context": "\n".join(lines) + "\n", "count": len(results)}
 
 
 class ExtractRequest(BaseModel):
@@ -246,6 +275,38 @@ def openapi_gpt():
                     "responses": {
                         "200": {
                             "description": "Résultats de la recherche",
+                            "content": {
+                                "application/json": {
+                                    "schema": {"type": "object"}
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/memories/context": {
+                "get": {
+                    "operationId": "getMemoryContext",
+                    "summary": "Bloc de mémoires pertinentes prêt à injecter dans la réponse",
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "in": "query",
+                            "required": True,
+                            "schema": {"type": "string"},
+                            "description": "Sujet ou question de l'utilisateur"
+                        },
+                        {
+                            "name": "n",
+                            "in": "query",
+                            "required": False,
+                            "schema": {"type": "integer", "default": 5},
+                            "description": "Nombre de mémoires"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Contexte mémoire formaté",
                             "content": {
                                 "application/json": {
                                     "schema": {"type": "object"}
