@@ -31,14 +31,13 @@ app.add_middleware(
 model       = None
 chroma      = None
 
-# Les mémoires vivent maintenant directement dans le vault Obsidian DigitBrain.
-DEFAULT_VAULT = (
-    "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
-    "Documents/DigitBrain/DigitBrain/DIGITBRAIN"
-)
-VAULT        = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
+# Le dossier des mémoires est résolu dynamiquement (env / config.json /
+# auto-détection Obsidian) — jamais codé en dur. Voir config.py.
+import config
+
+VAULT        = config.resolve_vault()
 # Depuis la Phase A : une note .md par mémoire dans Memories/
-MEMORIES_DIR = VAULT / "Memories"
+MEMORIES_DIR = (VAULT / "Memories") if VAULT else None
 VENV_PYTHON  = sys.executable
 
 
@@ -73,7 +72,7 @@ def load_all_memories():
     """Charge toutes les mémoires depuis Memories/*.md.
     Retourne une liste de {file, content}."""
     memories = []
-    if not MEMORIES_DIR.exists():
+    if not MEMORIES_DIR or not MEMORIES_DIR.exists():
         return memories
     for file in MEMORIES_DIR.glob("*.md"):
         text = read_memory_note(file)
@@ -88,7 +87,7 @@ def load_all_memories():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "vault": str(VAULT) if VAULT else None}
 
 
 RELEVANCE_THRESHOLD = 0.30  # en-dessous → pas assez pertinent pour la réinjection
@@ -219,8 +218,8 @@ def count_memories():
 
     # Répartition par catégorie (lue depuis les hubs Categories/)
     by_category = {}
-    categories_dir = VAULT / "Categories"
-    if categories_dir.exists():
+    categories_dir = (VAULT / "Categories") if VAULT else None
+    if categories_dir and categories_dir.exists():
         for hub in categories_dir.glob("*.md"):
             n = sum(1 for l in hub.read_text(encoding="utf-8").splitlines()
                     if l.strip().startswith("- [["))

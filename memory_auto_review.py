@@ -59,15 +59,13 @@ NEW_CAT_MEMBER_SIM = 0.40
 
 TRIAGE_CAT = "À trier"
 
-DEFAULT_VAULT = (
-    "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
-    "Documents/DigitBrain/DigitBrain/DIGITBRAIN"
-)
-VAULT = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
+# Le dossier des mémoires est résolu dynamiquement (env / config.json /
+# auto-détection Obsidian) — jamais codé en dur. Voir config.py.
+import config
 
-# Dossiers dans le vault
-MEMORIES_DIR = VAULT / "Memories"    # une note par mémoire
-CATEGORIES_DIR = VAULT / "Categories"  # notes hub par catégorie
+VAULT = config.resolve_vault()
+MEMORIES_DIR   = (VAULT / "Memories")   if VAULT else None  # une note par mémoire
+CATEGORIES_DIR = (VAULT / "Categories") if VAULT else None  # notes hub par catégorie
 
 inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
 log_path   = Path("AI_OS/Inbox/dernier_ajout.md")
@@ -402,8 +400,8 @@ def main():
         print("Aucune inbox trouvée.")
         return
 
-    if not VAULT.exists():
-        print(f"Erreur : vault introuvable → {VAULT}")
+    if VAULT is None or not VAULT.exists():
+        print(config.NO_VAULT_MSG)
         sys.exit(1)
 
     content = inbox_path.read_text(encoding="utf-8")
