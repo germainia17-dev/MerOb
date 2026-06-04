@@ -1,30 +1,31 @@
 # Mémoires à valider
 
-Date : 2026-06-03
+Date : 2026-06-04
 
 ## Haute confiance
 
 - [ ] **Identité :** Germain Gibert, 17 ans.
-- [ ] **Situation scolaire :** Élève en 1ère STI2D au Lycée Joseph Fourier, Auxerre.
-- [ ] **Projet phare :** Développement d'une prothèse paralympique en impression 3D (projet pour le bac/STI2D).
+- [ ] **Situation actuelle :** Élève en 1ère STI2D au Lycée Joseph Fourier (Auxerre).
+- [ ] **Projet majeur :** Développement d'une prothèse paralympique en impression 3D (objectif principal pour le bac/STI2D).
 - [ ] **Projet IA :** Développement d'un assistant IA en local sur Raspberry Pi.
-- [ ] **Outils utilisés (technologie) :** Raspberry Pi, n8n, Claude Code.
-- [ ] **Gestion des connaissances :** Utilise Obsidian pour son "second cerveau" nommé DigitBrain.
-- [ ] **Objectif événementiel :** Participer à VivaTech (date du 20 juin mentionnée).
-- [ ] **Intérêts et loisirs :**
-    - [ ] **Sports de glisse :** Ski/snowboard (spot de prédilection : Les Portes du Soleil, Avoriaz/Morzine).
-    - [ ] **Gaming :** Consommateur de jeux compétitifs et de performance (Brawl Stars, Geometry Dash, GTA Online).
-    - [ ] **Musique :** Apprécie le French Rap / Cloud Rap (style Houdi).
+- [ ] **Outils et technologies utilisés :** Raspberry Pi, n8n, Claude Code, Obsidian, Micro:bit, Adalo.
+- [ ] **Préférence de travail (gestion des connaissances) :** Centralise son "second cerveau" nommé DigitBrain sur Obsidian.
+- [ ] **Préférence de travail (automatisation) :** Recherche l'automatisation via n8n et Claude Code.
+- [ ] **Objectif/Événement à court terme :** Participe à l'événement VivaTech le 20 juin, nécessitant la préparation du projet de prothèse.
 
 ## À vérifier
 
-- [ ] **Certification IA :** Vise ou a validé la certification Gemini for student.
-- [ ] **Projets potentiels/actifs :** Implication dans des projets utilisant Micro:bit et Adalo (mentionnés comme exemples d'éparpillement).
-- [ ] **Préférence de travail :** Tendance à l'éparpillement entre plusieurs projets.
-- [ ] **Préférence de travail :** Tendance à se laisser distraire par le gaming et les réseaux.
-- [ ] **Tâche utile :** Préparer les compétences et livrables (notamment le projet de prothèse) pour être au niveau de l'ambition de VivaTech.
+- [ ] **Objectif :** Vise (ou a validé) la certification Gemini for student.
+- [ ] **Diagnostic (potentiel point faible) :** Tendance à l'éparpillement entre plusieurs projets (prothèse STI2D, assistant IA sur Raspberry Pi, n8n, scripts Micro:bit, Adalo), potentiellement sans les achever.
+- [ ] **Questionnement :** Difficulté à terminer les projets commencés.
+- [ ] **Questionnement :** Préoccupations concernant l'équilibre entre l'ambition, le niveau des livrables (notamment pour la prothèse) et les distractions (gaming, réseaux sociaux) avant VivaTech.
 
 ## Faible priorité
 
 - [ ] **Profil physique :** 1m77, profil mince.
-- [ ] **Style :** Coupe de cheveux buzz cut / textured crop.
+- [ ] **Loisirs et intérêts :**
+    -   Glisse : Ski/snowboard (spot de prédilection aux Portes du Soleil - Avoriaz/Morzine).
+    -   Gaming : Consommateur de jeux compétitifs et axés sur la performance (Brawl Stars, Geometry Dash, GTA Online).
+    -   Culture musicale : Consommateur de French Rap / Cloud Rap (style Houdi).
+- [ ] **Style personnel :** Coupe buzz cut / textured crop.
+- [ ] **Observation :** Le gaming et les réseaux sociaux sont identifiés comme des sources potentielles de distraction.
