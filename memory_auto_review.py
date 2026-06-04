@@ -1,19 +1,24 @@
 """
 memory_auto_review.py
 ─────────────────────
-Traite automatiquement les mémoires extraites et les écrit
-DIRECTEMENT dans le vault Obsidian DigitBrain, au format tableau.
+Traite automatiquement les mémoires extraites.
 
-  - NEW      → ajoutée (avec date) dans la bonne note du vault
+Pour chaque mémoire validée :
+  - NEW      → une note .md individuelle créée dans Memories/
   - DOUBLON  → ignorée silencieusement
-  - UPDATE   → l'ancienne ligne est remplacée
+  - UPDATE   → la note existante mise à jour
 
-Classement par similarité sémantique vers les notes existantes.
-Si le classement est trop incertain → note "00 À trier.md".
+Chaque note contient :
+  - Le texte de la mémoire
+  - Sa date d'extraction
+  - Un wikilink [[Catégorie]] vers sa catégorie hub
+  - Des wikilinks [[Mémoire proche]] vers les 2 mémoires les plus similaires
+  → Le graph Obsidian forme un réseau organique
+
+Les notes de catégorie (hub) sont mises à jour automatiquement
+avec la liste des mémoires qu'elles contiennent.
+
 Zéro appel API. Zéro interaction humaine.
-
-Importable : les helpers (parse_note, write_note, detect_category…) peuvent
-être réutilisés ailleurs. Le pipeline ne s'exécute que via __main__.
 """
 
 from pathlib import Path
@@ -21,6 +26,7 @@ from datetime import datetime
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import re
 import os
 import sys
 
@@ -28,11 +34,12 @@ import sys
 # CONFIG
 # ======================
 
-DOUBLON_THRESHOLD = 0.85   # ≥ → doublon certain
-UPDATE_THRESHOLD  = 0.60   # entre les deux → mise à jour
-TRIAGE_THRESHOLD  = 0.25   # classement < seuil → note "À trier"
+DOUBLON_THRESHOLD = 0.92   # ≥ → doublon certain (plus strict car notes individuelles)
+UPDATE_THRESHOLD  = 0.70   # entre les deux → mise à jour
+TRIAGE_THRESHOLD  = 0.25   # classement < seuil → catégorie "À trier"
+RELATED_N         = 2      # nombre de liens vers mémoires proches
 
-TRIAGE_NOTE = "00 À trier.md"
+TRIAGE_CAT = "À trier"
 
 DEFAULT_VAULT = (
     "/Users/MacBook/Library/Mobile Documents/iCloud~md~obsidian/"
@@ -40,57 +47,49 @@ DEFAULT_VAULT = (
 )
 VAULT = Path(os.getenv("OBSIDIAN_VAULT", DEFAULT_VAULT))
 
+# Dossiers dans le vault
+MEMORIES_DIR = VAULT / "Memories"    # une note par mémoire
+CATEGORIES_DIR = VAULT / "Categories"  # notes hub par catégorie
+
 inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
 log_path   = Path("AI_OS/Inbox/dernier_ajout.md")
 
 # ======================
-# CATÉGORIES = NOTES DU VAULT
-# Descriptions affinées pour un classement plus précis.
-# La clé est le chemin RELATIF dans le vault.
+# CATÉGORIES SÉMANTIQUES
 # ======================
 
 CATEGORIES = {
-    "05 Identity.md": (
+    "Identité": (
         "qui est la personne : nom, prénom, âge, ville, lycée, classe STI2D, "
-        "apparence physique, taille en cm, corpulence, coupe de cheveux, look, "
-        "style vestimentaire, style personnel, "
-        "loisirs, passions, temps libre, ski, snowboard, gaming, jeux vidéo préférés, "
-        "musique écoutée, rap, artistes, "
-        "habitudes personnelles, goûts, préférences de vie"
+        "apparence physique, taille, style vestimentaire, coupe de cheveux, "
+        "personnalité, loisirs, passions, ski, snowboard, gaming, jeux vidéo, "
+        "musique, rap, habitudes personnelles, goûts, préférences de vie"
     ),
-    "03 Projects.md": (
-        "un projet concret que la personne construit ou développe : "
-        "prothèse paralympique, impression 3D, assistant IA local, AI OS, "
-        "application, prototype, démo, livrable, "
-        "objectif de projet, but à atteindre, certification visée, "
-        "deadline, événement à préparer comme VivaTech"
+    "Projets": (
+        "projet concret construit ou développé : prothèse, impression 3D, "
+        "assistant IA, AI OS, application, prototype, démo, livrable, "
+        "objectif de projet, certification, deadline, VivaTech"
     ),
-    "04 Thinking.md": (
-        "une réflexion, une décision prise, un choix d'architecture, "
-        "une idée ou piste à explorer, un questionnement, une stratégie, "
-        "une considération, un raisonnement, une prise de position"
+    "Réflexions": (
+        "décision prise, choix d'architecture, idée à explorer, questionnement, "
+        "stratégie, considération, raisonnement, prise de position, analyse"
     ),
-    "01 Learnig.md": (
-        "une connaissance technique apprise, un concept compris, une leçon, "
-        "RAG, embeddings, vecteurs, similarité cosinus, tokens, "
-        "principe d'ingénierie logicielle, notion d'intelligence artificielle, "
-        "savoir réutilisable, explication d'un mécanisme"
+    "Apprentissages": (
+        "connaissance technique apprise, concept compris, leçon, "
+        "RAG, embeddings, vecteurs, tokens, IA, ingénierie logicielle, "
+        "notion technique, principe réutilisable"
     ),
-    "Intelligence atrificial/Outils.md": (
-        "un outil ou une technologie utilisée : logiciel, application, "
-        "langage de programmation, framework, bibliothèque, script, "
-        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, Claude Code, ChatGPT, "
-        "Raspberry Pi, n8n, Micro:bit, Adalo, VS Code, ContextOptimizer"
+    "Outils": (
+        "outil ou technologie utilisée : logiciel, langage, framework, script, "
+        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, Claude Code, "
+        "ChatGPT, Raspberry Pi, n8n, Micro:bit, Adalo, VS Code, ContextOptimizer"
     ),
-    "06 Mistakes.md": (
-        "un défaut personnel, un point faible, une mauvaise habitude, "
-        "une difficulté récurrente, un problème de comportement : "
-        "éparpillement, dispersion, procrastination, distraction, "
-        "difficulté à terminer les projets, manque de discipline, perte de temps"
+    "Erreurs": (
+        "défaut personnel, point faible, mauvaise habitude, difficulté récurrente, "
+        "éparpillement, procrastination, distraction, difficulté à terminer"
     ),
-    "07 Sources.md": (
-        "une source ou référence externe : lien web, URL, article, "
-        "vidéo YouTube, documentation, livre, tutoriel, ressource à consulter"
+    "Sources": (
+        "source externe, lien, URL, article, documentation, ressource à consulter"
     ),
 }
 
@@ -104,130 +103,172 @@ _category_descs = list(CATEGORIES.values())
 model = SentenceTransformer("all-MiniLM-L6-v2")
 _category_embs = model.encode(_category_descs)
 
+
 # ======================
-# FORMAT TABLEAU
+# UTILITAIRES
 # ======================
 
-def parse_note(file_path: Path) -> list:
-    """Lit une note au format tableau → liste de {date, memory}."""
-    rows = []
-    if not file_path.exists():
-        return rows
-
-    for line in file_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line.startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) < 2:
-            continue
-        # Ignorer l'en-tête et la ligne de séparation
-        if cells[0].lower() == "date":
-            continue
-        if set(cells[0]) <= {"-", ":", " "}:
-            continue
-        rows.append({"date": cells[0], "memory": cells[1]})
-    return rows
-
-
-def write_note(file_path: Path, title: str, rows: list) -> None:
-    """Écrit une note au format : titre + tableau Date | Mémoire."""
-    lines = [f"# {title}", "", "| Date | Mémoire |", "| --- | --- |"]
-    for r in rows:
-        mem = r["memory"].replace("|", "/").strip()
-        lines.append(f"| {r['date']} | {mem} |")
-    file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+def slugify(text: str, max_len: int = 50) -> str:
+    """Transforme un texte en nom de fichier propre."""
+    # Supprime le markdown gras/italique
+    text = re.sub(r"\*+", "", text)
+    # Supprime les caractères spéciaux, garde lettres/chiffres/espaces
+    text = re.sub(r"[^\w\s\-àâäéèêëïîôùûüçœæ]", " ", text, flags=re.UNICODE)
+    # Collapse les espaces
+    text = re.sub(r"\s+", " ", text).strip()
+    # Tronque proprement
+    if len(text) > max_len:
+        text = text[:max_len].rsplit(" ", 1)[0]
+    return text.strip()
 
 
 def is_junk(memory: str) -> bool:
-    """Détecte les fragments inutiles : titres vides, '...', lignes trop courtes.
-    Ex : '**Loisirs et intérêts :**' est un en-tête, pas une mémoire."""
+    """Détecte les fragments inutiles : titres vides, '...', lignes trop courtes."""
     m = memory.strip()
     if not m or m in ("...", "…"):
         return True
-    stripped = m.replace("*", "").strip()
-    # Un fragment de titre se termine par ":" sans contenu après
+    stripped = re.sub(r"\*+", "", m).strip()
     if stripped.endswith(":"):
         return True
-    # Trop court pour être une vraie information
-    if len(stripped) < 4:
+    if len(stripped) < 8:
         return True
     return False
 
 
 def detect_category(memory: str) -> str:
-    """Classe la mémoire vers la note la plus proche.
-    Si le score est trop bas → note 'À trier'."""
+    """Classe la mémoire vers la catégorie la plus proche.
+    Retourne TRIAGE_CAT si score trop bas."""
     emb    = model.encode([memory])
     scores = cosine_similarity(emb, _category_embs)[0]
     idx    = int(np.argmax(scores))
     if float(scores[idx]) < TRIAGE_THRESHOLD:
-        return TRIAGE_NOTE
+        return TRIAGE_CAT
     return _category_keys[idx]
 
 
-def add_memory(memory: str, rel_path: str, date: str) -> str:
-    file_path = VAULT / rel_path
-    file_path.parent.mkdir(parents=True, exist_ok=True)
+# ======================
+# LECTURE / ÉCRITURE NOTES
+# ======================
 
-    rows  = parse_note(file_path)
-    clean = memory.replace("|", "/").strip()
+def get_all_memory_notes() -> list:
+    """Lit toutes les notes de mémoire existantes.
+    Retourne liste de {slug, memory, category, date, path}."""
+    notes = []
+    if not MEMORIES_DIR.exists():
+        return notes
+    for f in MEMORIES_DIR.glob("*.md"):
+        text = f.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        # La mémoire est dans la première ligne non-vide non-frontmatter
+        memory_text = ""
+        in_front = False
+        for line in lines:
+            if line.strip() == "---":
+                in_front = not in_front
+                continue
+            if in_front:
+                continue
+            if line.strip() and not line.startswith("#") and not line.startswith("[["):
+                memory_text = line.strip()
+                break
+        if memory_text:
+            # Extraire la catégorie depuis les wikilinks
+            cat_match = re.search(r"\[\[([^\]]+)\]\]", text)
+            cat = cat_match.group(1) if cat_match else TRIAGE_CAT
+            notes.append({
+                "slug": f.stem,
+                "memory": memory_text,
+                "category": cat,
+                "path": f,
+            })
+    return notes
 
-    if any(r["memory"] == clean for r in rows):
-        return "duplicate"
 
-    rows.append({"date": date, "memory": memory})
-    write_note(file_path, Path(rel_path).stem, rows)
-    return "added"
+def memory_to_filename(memory: str) -> str:
+    """Génère un nom de fichier unique depuis le texte d'une mémoire."""
+    slug = slugify(memory, max_len=55)
+    return slug + ".md"
 
 
-def update_memory(rel_path: str, old: str, new: str, date: str) -> bool:
-    file_path = VAULT / rel_path
-    rows = parse_note(file_path)
-    old_clean = old.replace("|", "/").strip()
-
-    found = False
-    for r in rows:
-        if r["memory"] == old_clean:
-            r["memory"] = new
-            r["date"]   = date
-            found = True
+def find_related(memory: str, all_notes: list, n: int = RELATED_N) -> list:
+    """Trouve les N mémoires les plus proches (excluant les doublons)."""
+    if not all_notes:
+        return []
+    texts = [note["memory"] for note in all_notes]
+    mem_emb   = model.encode([memory])
+    all_embs  = model.encode(texts)
+    scores    = cosine_similarity(mem_emb, all_embs)[0]
+    # Exclure la mémoire elle-même (score = 1.0)
+    sorted_idx = np.argsort(scores)[::-1]
+    related = []
+    for idx in sorted_idx:
+        if scores[idx] > 0.98:   # c'est la même mémoire
+            continue
+        if scores[idx] < 0.30:  # trop peu lié
             break
-
-    if not found:
-        return False
-
-    write_note(file_path, Path(rel_path).stem, rows)
-    return True
+        related.append(all_notes[idx]["slug"])
+        if len(related) >= n:
+            break
+    return related
 
 
-def get_existing_memories() -> list:
-    """Toutes les mémoires déjà présentes dans les notes de catégorie."""
-    existing = []
-    for rel in _category_keys + [TRIAGE_NOTE]:
-        for r in parse_note(VAULT / rel):
-            existing.append({"file": rel, "memory": r["memory"]})
-    return existing
+def write_memory_note(memory: str, category: str, date: str, related_slugs: list) -> Path:
+    """Crée ou met à jour la note individuelle d'une mémoire."""
+    MEMORIES_DIR.mkdir(parents=True, exist_ok=True)
+    filename = memory_to_filename(memory)
+    path     = MEMORIES_DIR / filename
+
+    related_links = "  ".join(f"[[{s}]]" for s in related_slugs)
+
+    lines = [
+        f"> {memory}",
+        "",
+        f"**Catégorie :** [[{category}]]",
+    ]
+    if related_links:
+        lines.append(f"**Liens :** {related_links}")
+    lines += [
+        "",
+        f"*Extrait le {date}*",
+    ]
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
 
 
-def reconcile(new_memory: str, existing: list) -> dict:
-    if not existing:
+def update_category_hub(category: str, all_notes: list) -> None:
+    """Met à jour la note hub d'une catégorie avec tous ses membres."""
+    CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
+    path = CATEGORIES_DIR / f"{category}.md"
+
+    members = [n for n in all_notes if n["category"] == category]
+
+    lines = [f"# {category}", "", f"*{len(members)} mémoire(s)*", ""]
+    for m in members:
+        lines.append(f"- [[{m['slug']}]]")
+    lines.append("")
+
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def reconcile(new_memory: str, existing_notes: list) -> dict:
+    """Cherche si la mémoire est un doublon ou une mise à jour."""
+    if not existing_notes:
         return {"classification": "NEW", "match": None, "score": 0.0}
 
-    texts        = [m["memory"] for m in existing]
-    new_emb      = model.encode([new_memory])
-    existing_emb = model.encode(texts)
-    scores       = cosine_similarity(new_emb, existing_emb)[0]
-    best_idx     = int(np.argmax(scores))
-    best_score   = float(scores[best_idx])
-    best_match   = existing[best_idx]
+    texts = [n["memory"] for n in existing_notes]
+    new_emb  = model.encode([new_memory])
+    all_embs = model.encode(texts)
+    scores   = cosine_similarity(new_emb, all_embs)[0]
+    best_idx = int(np.argmax(scores))
+    best_score = float(scores[best_idx])
 
     if best_score >= DOUBLON_THRESHOLD:
-        return {"classification": "DOUBLON", "match": best_match, "score": best_score}
+        return {"classification": "DOUBLON", "match": existing_notes[best_idx], "score": best_score}
     elif best_score >= UPDATE_THRESHOLD:
-        return {"classification": "UPDATE",  "match": best_match, "score": best_score}
+        return {"classification": "UPDATE",  "match": existing_notes[best_idx], "score": best_score}
     else:
-        return {"classification": "NEW",     "match": None,       "score": best_score}
+        return {"classification": "NEW",     "match": None,                     "score": best_score}
 
 
 # ======================
@@ -246,6 +287,7 @@ def main():
     content = inbox_path.read_text(encoding="utf-8")
     raw_memories = []
     skipped_junk = 0
+
     for line in content.splitlines():
         if line.startswith("- [ ] "):
             memory = line.replace("- [ ] ", "").strip()
@@ -256,26 +298,24 @@ def main():
                 continue
             raw_memories.append(memory)
 
-    if skipped_junk:
-        print(f"→ {skipped_junk} fragment(s) inutile(s) ignoré(s)")
-
     if not raw_memories:
         print("Aucune mémoire à traiter.")
         return
 
     today = datetime.now().strftime("%Y-%m-%d")
-    print(f"\n→ {len(raw_memories)} mémoire(s) détectées dans l'Inbox")
-    print(f"→ Vault : {VAULT}")
+    print(f"\n→ {len(raw_memories)} mémoire(s) à traiter (+ {skipped_junk} fragment(s) ignoré(s))")
+    print(f"→ Vault : {VAULT.name}")
 
-    existing_memories = get_existing_memories()
+    # Charge les notes existantes
+    existing_notes = get_all_memory_notes()
+    print(f"→ {len(existing_notes)} notes déjà présentes dans Memories/\n")
 
-    added_list      = []
-    updated_list    = []
-    duplicate_list  = []
-    category_counts = {}
+    added_list     = []
+    updated_list   = []
+    duplicate_list = []
 
     for memory in raw_memories:
-        result         = reconcile(memory, existing_memories)
+        result         = reconcile(memory, existing_notes)
         classification = result["classification"]
         match          = result["match"]
 
@@ -284,32 +324,42 @@ def main():
             print(f"  [DOUBLON]  {memory[:65]}")
             continue
 
-        if classification == "UPDATE":
-            ok = update_memory(match["file"], match["memory"], memory, today)
-            if ok:
-                updated_list.append({"new": memory, "old": match["memory"], "file": match["file"]})
-                for m in existing_memories:
-                    if m["memory"] == match["memory"]:
-                        m["memory"] = memory
-                print(f"  [UPDATE]   {memory[:65]}")
-                continue
-            # sinon → fallback NEW
+        category = detect_category(memory)
 
-        # NEW (ou UPDATE qui a échoué)
-        cat     = detect_category(memory)
-        outcome = add_memory(memory, cat, today)
-        if outcome == "added":
-            added_list.append({"memory": memory, "file": cat})
-            existing_memories.append({"file": cat, "memory": memory})
-            category_counts[cat] = category_counts.get(cat, 0) + 1
-            tag = "À TRIER" if cat == TRIAGE_NOTE else Path(cat).stem
-            print(f"  [NEW → {tag}]  {memory[:65]}")
-        else:
-            duplicate_list.append(memory)
-            print(f"  [IGNORÉE]  {memory[:65]}")
+        if classification == "UPDATE" and match:
+            # Supprimer l'ancienne note et réécrire
+            if match["path"].exists():
+                match["path"].unlink()
+            # Mettre à jour dans existing_notes pour les liens
+            for n in existing_notes:
+                if n["memory"] == match["memory"]:
+                    n["memory"]   = memory
+                    n["category"] = category
+                    n["slug"]     = slugify(memory, 55)
+            updated_list.append({"new": memory, "old": match["memory"], "category": category})
+            print(f"  [UPDATE → {category}]  {memory[:55]}")
+
+        if classification == "NEW" or classification == "UPDATE":
+            # Liens vers mémoires proches (sur les notes existantes à ce moment)
+            others  = [n for n in existing_notes if n["memory"] != memory]
+            related = find_related(memory, others)
+
+            note_path = write_memory_note(memory, category, today, related)
+
+            if classification == "NEW":
+                slug = note_path.stem
+                existing_notes.append({"slug": slug, "memory": memory,
+                                        "category": category, "path": note_path})
+                added_list.append({"memory": memory, "category": category, "slug": slug})
+                print(f"  [NEW → {category}]  {memory[:55]}")
+
+    # Met à jour tous les hubs de catégorie
+    all_cats = set(n["category"] for n in existing_notes)
+    for cat in all_cats:
+        update_category_hub(cat, existing_notes)
 
     write_log(raw_memories, added_list, updated_list, duplicate_list)
-    print_summary(raw_memories, added_list, updated_list, duplicate_list, category_counts)
+    print_summary(raw_memories, added_list, updated_list, duplicate_list)
 
 
 def write_log(raw, added, updated, duplicates):
@@ -323,44 +373,34 @@ def write_log(raw, added, updated, duplicates):
         f"**Doublons ignorés** : {len(duplicates)}",
         "",
     ]
-
     if added:
-        lines += ["## ✅ Nouvelles mémoires", ""]
+        lines += ["## ✅ Nouvelles notes", ""]
         for item in added:
-            lines.append(f"- **{Path(item['file']).stem}** — {item['memory']}")
+            lines.append(f"- **{item['category']}** — [[{item['slug']}]]")
         lines.append("")
-
     if updated:
         lines += ["## 🔄 Mises à jour", ""]
         for item in updated:
-            lines.append(f"- **{Path(item['file']).stem}** — {item['new']}")
-            lines.append(f"  *(remplace : {item['old']})*")
+            lines.append(f"- **{item['category']}** — {item['new'][:60]}")
+            lines.append(f"  *(remplace : {item['old'][:60]})*")
         lines.append("")
-
     if duplicates:
         lines += ["## ⏭ Doublons ignorés", ""]
         for m in duplicates:
             lines.append(f"- {m}")
         lines.append("")
-
     log_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def print_summary(raw, added, updated, duplicates, category_counts):
+def print_summary(raw, added, updated, duplicates):
     print(f"\n===== RÉSUMÉ =====")
     print(f"Traitées       : {len(raw)}")
-    print(f"Nouvelles      : {len(added)}")
+    print(f"Nouvelles notes: {len(added)}")
     print(f"Mises à jour   : {len(updated)}")
     print(f"Doublons       : {len(duplicates)}")
     print(f"Appels API     : 0")
-
-    if category_counts:
-        print("\nClassement dans le vault :")
-        for cat, count in category_counts.items():
-            tag = "À trier" if cat == TRIAGE_NOTE else Path(cat).stem
-            print(f"  - {tag} : {count}")
-
-    print(f"\nNotes mises à jour dans Obsidian (DigitBrain) ✅")
+    print(f"\nNotes créées dans : Memories/")
+    print(f"Hubs mis à jour dans : Categories/")
     print(f"Log : AI_OS/Inbox/dernier_ajout.md")
 
 
