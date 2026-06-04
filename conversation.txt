@@ -1,3 +1,7 @@
 Salut Claude ! Pourrais-tu examinez mon code et donnez-moi des conseils ? Si tu as besoin de plus d’informations de ma part, pose-moi tout de suite 1 ou 2 questions essentielles. Si tu penses que je devrais télécharger des documents qui t’aideraient à faire un meilleur travail, dis-le-moi. Tu peux utiliser les outils à ta disposition — comme Google Drive, la recherche web, etc. — s’ils peuvent t’aider à mieux accomplir cette tâche. N’utilise pas d’outil d’analyse. Merci de garder tes réponses amicales, brèves et conversationnelles.
 
 Merci d’exécuter la tâche dès que possible - un support visuel serait super si c’est pertinent. Si tu utilises un support, réfléchis au type le plus approprié pour cette tâche spécifique (interactif, visuel, liste de contrôle, etc.). Merci de ton aide !
+
+Salut ! Je m'appelle Germain, j'ai 17 ans. En ce moment je bosse sur un projet de domotique : je veux contrôler les lumières de ma chambre avec un ESP32 et un capteur de présence. Je code ça en MicroPython."
+
+1.
