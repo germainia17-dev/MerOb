@@ -181,4 +181,17 @@ Le code complet uniquement du fichier précis sur lequel tu demandes à Claude d
 
 🚀 Par quoi tu commences AUJOURD'HUI ?
 
-Ne commence pas à coder une interface graphique ou un agent autonome complexe.
+Ne commence pas à coder une interface graphique ou un agent autonome complexe. Fais un script Python ultra-simple en ligne de commande :
+
+Tu lui donnes un chemin de dossier.
+
+Il lit le .gitignore.
+
+Il concatène le texte des fichiers restants dans un seul fichier context.txt en ajoutant des balises XML (que Claude adore) : <file name="main.py"> [code] </file>.
+
+Il t'affiche le compte exact de tokens (utilise la bibliothèque tiktoken ou anthropic pour calculer le coût réel avant d'envoyer).
+
+Tu as le plan. C'est une vraie feature à forte valeur ajoutée pour ton portfolio et ton projet "DigitBrain". Est-ce que tu te lances là-dedans en mode structuré, ou tu vas abandonner dès qu'il faudra parser l'AST Python ?
+
+Gemini est une IA et peut se tromper, y compris sur des personnes. Votre confidentialité et Gemini
+S'ouvre dans une nouvelle fenêtre
