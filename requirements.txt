@@ -1,0 +1,15 @@
+# AI OS — dépendances (chemin critique, sans PyTorch)
+# Embeddings via fastembed (ONNX, ~50 Mo) au lieu de sentence-transformers (~2 Go).
+
+fastapi>=0.136
+uvicorn[standard]>=0.48
+pydantic>=2.13
+chromadb>=1.5
+scikit-learn>=1.5
+numpy>=2.0
+fastembed>=0.8
+google-genai>=2.7
+python-dotenv>=1.0
+
+# Optionnel : serveur MCP (pour Claude Desktop)
+mcp>=1.27
