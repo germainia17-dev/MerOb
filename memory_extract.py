@@ -1,0 +1,93 @@
+from pathlib import Path
+from datetime import datetime
+from google import genai
+import subprocess
+import sys
+
+import config
+
+api_key = config.get_api_key()
+
+if not api_key:
+    print(config.NO_API_KEY_MSG)
+    sys.exit(1)
+
+client = genai.Client(api_key=api_key)
+
+conversation_path = Path("conversation.txt")
+inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
+
+inbox_path.parent.mkdir(parents=True, exist_ok=True)
+
+conversation = conversation_path.read_text(encoding="utf-8")
+
+prompt = f"""
+Tu es le module mémoire d'un assistant IA personnel.
+
+Analyse cette conversation et extrais uniquement les informations importantes à mémoriser.
+
+À garder :
+- projets de l'utilisateur
+- objectifs
+- préférences de travail
+- outils utilisés
+- décisions importantes
+- connaissances durables
+- tâches utiles
+
+À ignorer :
+- phrases inutiles
+- remerciements
+- hésitations
+- répétitions
+- détails temporaires sans intérêt
+
+Retourne uniquement du Markdown propre pour Obsidian.
+
+Format obligatoire :
+
+# Mémoires à valider
+
+Date : {datetime.now().strftime("%Y-%m-%d")}
+
+## Haute confiance
+
+- [ ] ...
+
+## À vérifier
+
+- [ ] ...
+
+## Faible priorité
+
+- [ ] ...
+
+Conversation :
+{conversation}
+"""
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt
+)
+
+result = response.text
+
+inbox_path.write_text(result, encoding="utf-8")
+
+print("Extraction terminée → AI_OS/Inbox/memories_to_review.md")
+print("Lancement de la validation automatique…")
+
+# Validation automatique — zéro interaction, zéro appel API supplémentaire
+auto_review = Path(__file__).parent / "memory_auto_review.py"
+proc = subprocess.run(
+    [sys.executable, str(auto_review)],
+    capture_output=False,   # affiche les logs en temps réel
+    text=True,
+)
+
+if proc.returncode != 0:
+    print("Avertissement : la validation automatique a échoué (vérifier memory_auto_review.py).")
+else:
+    print("\nMémoires enregistrées dans ton vault Obsidian (Memories/ + Categories/).")
+    print("Log lisible dans Obsidian : AI_OS/Inbox/dernier_ajout.md")

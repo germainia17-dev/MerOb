@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Obsidian Chat Memory",
+  "version": "1.0",
+  "description": "Injecte ta mémoire personnelle dans ChatGPT, Claude et Gemini.",
+
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "http://localhost:8000/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Obsidian Chat Memory"
+  }
+}
