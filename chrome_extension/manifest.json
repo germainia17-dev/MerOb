@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI OS Memory",
+  "name": "Obsidian Chat Memory",
   "version": "1.0",
   "description": "Injecte ta mémoire personnelle dans ChatGPT, Claude et Gemini.",
 
@@ -28,6 +28,6 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "AI OS Memory"
+    "default_title": "Obsidian Chat Memory"
   }
 }

@@ -1,5 +1,5 @@
 // ======================
-// AI OS Memory — content script
+// Obsidian Chat Memory — content script
 // Fonctionne sur ChatGPT, Claude, Gemini
 // Appelle le serveur local FastAPI (localhost:8000)
 // ======================
@@ -37,7 +37,7 @@ function createPanel() {
   el.id = "aios-panel";
   el.innerHTML = `
     <div id="aios-header">
-      <span>🧠 AI OS Memory</span>
+      <span>🧠 Obsidian Chat Memory</span>
       <div id="aios-controls">
         <button id="aios-extract-btn" title="Extraire les mémoires de cette conversation">⬆ Extraire</button>
         <button id="aios-toggle" title="Réduire">−</button>

@@ -83,7 +83,7 @@ CATEGORIES = {
     ),
     "Projets": (
         "projet concret construit ou développé : prothèse, impression 3D, "
-        "assistant IA, AI OS, application, prototype, démo, livrable, "
+        "assistant IA, application, prototype, démo, livrable, "
         "objectif de projet, certification, deadline, VivaTech"
     ),
     "Réflexions": (

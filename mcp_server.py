@@ -11,7 +11,7 @@ import sys
 # CONFIG
 # ======================
 
-mcp         = FastMCP("AI OS Memory")
+mcp         = FastMCP("Obsidian Chat Memory")
 model       = Embedder()
 chroma      = chromadb.PersistentClient(path=str(Path(__file__).parent / "chroma_db"))
 memory_dir  = Path(__file__).parent / "AI_OS/Memory"

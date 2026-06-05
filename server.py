@@ -15,7 +15,7 @@ import os
 # CONFIG
 # ======================
 
-app = FastAPI(title="AI OS Memory Server", version="1.0")
+app = FastAPI(title="Obsidian Chat Memory Server", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -246,7 +246,7 @@ def openapi_gpt():
     schema = {
         "openapi": "3.1.0",
         "info": {
-            "title": "AI OS Memory",
+            "title": "Obsidian Chat Memory",
             "version": "1.0",
             "description": "Accès à la mémoire personnelle de l'utilisateur."
         },

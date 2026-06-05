@@ -112,7 +112,7 @@ def resolve_vault() -> Path | None:
 
 def interactive_setup() -> Path | None:
     """Configuration au premier lancement (à appeler depuis un terminal)."""
-    print("\n=== Configuration AI OS — dossier Obsidian ===\n")
+    print("\n=== Configuration Obsidian Chat Memory — dossier Obsidian ===\n")
     vaults = detect_obsidian_vaults()
 
     if vaults:
