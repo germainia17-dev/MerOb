@@ -25,8 +25,13 @@ app.add_middleware(
         "https://claude.ai",
         "https://gemini.google.com",
     ],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
+    # Chrome's Private Network Access: requests from an HTTPS page (chatgpt.com)
+    # to a private address (localhost) are blocked unless the server explicitly
+    # acknowledges the preflight. Without this the extension just sees "server
+    # unreachable". Requires Starlette ≥ 0.37.
+    allow_private_network=True,
 )
 
 model       = None
