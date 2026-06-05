@@ -38,7 +38,7 @@ def load_all_memories() -> list:
     memories = []
     if not MEMORIES_DIR or not MEMORIES_DIR.exists():
         return memories
-    for file in MEMORIES_DIR.glob("*.md"):
+    for file in MEMORIES_DIR.rglob("*.md"):
         text = read_memory_note(file)
         if text:
             memories.append({"file": file.name, "content": text})
