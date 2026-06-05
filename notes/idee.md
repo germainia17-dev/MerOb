@@ -1,1 +1,0 @@
-Je veux apprendre à créer un assistant capable de lire mes fichiers.

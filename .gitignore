@@ -6,3 +6,11 @@ chroma_db/
 server.log
 backup_ancien_format_vault/
 config.json
+
+# Données personnelles / runtime — ne JAMAIS publier
+conversation.txt
+AI_OS/Inbox/
+AI_OS/Memory/
+AI_OS/discovered_categories.json
+notes/*
+!notes/example.md
