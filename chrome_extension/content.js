@@ -41,6 +41,7 @@ function createPanel() {
       <div id="aios-controls">
         <button id="aios-extract-btn" title="Extract memories from this conversation">⬆ Extract</button>
         <button id="aios-toggle" title="Minimize">−</button>
+        <button id="aios-close" title="Close">×</button>
       </div>
     </div>
     <div id="aios-body">
@@ -143,10 +144,36 @@ function createPanel() {
     #aios-inject-btn:hover { background: #b4befe; }
     #aios-panel.minimized #aios-body { display: none; }
     #aios-panel.minimized { max-height: 44px; }
+    #aios-close:hover { background: #f38ba8 !important; color: #1e1e2e; }
+    #aios-launcher {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #313244;
+      font-size: 22px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      z-index: 99999;
+      user-select: none;
+    }
+    #aios-launcher:hover { background: #45475a; }
   `;
 
   document.head.appendChild(style);
   document.body.appendChild(el);
+
+  // Floating launcher to reopen the panel after it has been closed
+  const launcher = document.createElement("div");
+  launcher.id = "aios-launcher";
+  launcher.title = "Open Obsidian Chat Memory";
+  launcher.textContent = "🧠";
+  document.body.appendChild(launcher);
 
   return el;
 }
@@ -294,6 +321,19 @@ function init() {
     panel.classList.toggle("minimized");
     document.getElementById("aios-toggle").textContent =
       panel.classList.contains("minimized") ? "+" : "−";
+  });
+
+  // Close → hide the panel and show the floating launcher to reopen it
+  const launcher = document.getElementById("aios-launcher");
+  document.getElementById("aios-close").addEventListener("click", () => {
+    panel.style.display = "none";
+    launcher.style.display = "flex";
+  });
+  launcher.addEventListener("click", () => {
+    panel.classList.remove("minimized");
+    document.getElementById("aios-toggle").textContent = "−";
+    panel.style.display = "flex";
+    launcher.style.display = "none";
   });
 
   // Manual search
