@@ -304,7 +304,7 @@ def get_all_memory_notes() -> list:
     notes = []
     if not MEMORIES_DIR.exists():
         return notes
-    for f in MEMORIES_DIR.glob("*.md"):
+    for f in MEMORIES_DIR.rglob("*.md"):
         text = f.read_text(encoding="utf-8")
         lines = text.splitlines()
         # The memory is on the first non-empty, non-frontmatter line
@@ -361,10 +361,20 @@ def find_related(memory: str, all_notes: list, n: int = RELATED_N) -> list:
 
 
 def write_memory_note(memory: str, category: str, date: str, related_slugs: list) -> Path:
-    """Creates or updates the individual note for a memory."""
-    MEMORIES_DIR.mkdir(parents=True, exist_ok=True)
+    """Creates or updates a memory note, filed under Memories/<Category>/.
+
+    One subfolder per category means the Obsidian graph can be colored by
+    folder (path: query → one color per category), and the file explorer
+    stays organized.
+    """
     filename = memory_to_filename(memory)
-    path     = MEMORIES_DIR / filename
+    # If this memory already lives under another category, drop the stale copy
+    # (e.g. when Phase B discovery moves it out of 'Unsorted').
+    for stale in MEMORIES_DIR.rglob(filename):
+        stale.unlink()
+    dest_dir = MEMORIES_DIR / category
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    path = dest_dir / filename
 
     related_links = "  ".join(f"[[{s}]]" for s in related_slugs)
 
