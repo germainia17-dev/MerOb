@@ -12,8 +12,8 @@ De zéro à fonctionnel en ~5 minutes.
 ## 1. Lancer le serveur
 
 ```bash
-git clone <url-du-repo>
-cd ai-os
+git clone https://github.com/<you>/obsidian-chat-memory
+cd obsidian-chat-memory
 
 # macOS / Linux
 ./start.sh

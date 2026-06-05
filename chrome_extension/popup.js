@@ -7,18 +7,18 @@ async function load() {
     const r    = await fetch(`${API}/memories/count`);
     const data = await r.json();
 
-    statusEl.textContent = "✓ Serveur connecté";
+    statusEl.textContent = "✓ Server connected";
     statusEl.className   = "ok";
 
     const pendingClass = data.pending_review > 0 ? "stat-value pending" : "stat-value";
 
     statsEl.innerHTML = `
       <div class="stat-row">
-        <span class="stat-label">Total mémoires</span>
+        <span class="stat-label">Total memories</span>
         <span class="stat-value">${data.total}</span>
       </div>
       <div class="stat-row">
-        <span class="stat-label">En attente</span>
+        <span class="stat-label">Pending review</span>
         <span class="${pendingClass}">${data.pending_review}</span>
       </div>
       <div class="by-file">
@@ -34,7 +34,7 @@ async function load() {
     `;
 
   } catch (e) {
-    statusEl.textContent = "⚠ Serveur inaccessible — lance uvicorn server:app --port 8000";
+    statusEl.textContent = "⚠ Server unreachable — run: python run.py";
     statusEl.className   = "err";
   }
 }

@@ -15,8 +15,8 @@ Plus besoin de launchd : un simple `python run.py` suffit sur tous les OS.
 import sys
 
 if sys.version_info < (3, 10):
-    print(f"Obsidian Chat Memory requiert Python 3.10 ou plus récent (détecté : {sys.version.split()[0]}).")
-    print("Installe une version récente depuis https://www.python.org/downloads/")
+    print(f"Obsidian Chat Memory requires Python 3.10 or newer (detected: {sys.version.split()[0]}).")
+    print("Download a recent version from https://www.python.org/downloads/")
     sys.exit(1)
 
 import config
@@ -26,19 +26,19 @@ def main():
     vault = config.resolve_vault()
 
     if vault is None:
-        print("Premier lancement — configurons ton vault Obsidian.")
+        print("First run — let's set up your Obsidian vault.")
         vault = config.interactive_setup()
         if vault is None:
-            print("\nConfiguration nécessaire pour continuer. Relance : python run.py")
+            print("\nSetup required to continue. Re-run: python run.py")
             return
 
-    # Clé Gemini : nécessaire pour l'extraction (pas pour la recherche/réinjection)
+    # Gemini key: needed for extraction (not for search/injection)
     if config.get_api_key() is None:
         config.setup_api_key()
 
-    print(f"\n✓ Vault des mémoires : {vault}")
-    print("→ Serveur Obsidian Chat Memory : http://localhost:8000")
-    print("  (garde cette fenêtre ouverte ; Ctrl+C pour arrêter)\n")
+    print(f"\n✓ Memory vault: {vault}")
+    print("→ Obsidian Chat Memory server: http://localhost:8000")
+    print("  (keep this window open; Ctrl+C to stop)\n")
 
     # Import tardif : uvicorn/server ne se chargent qu'une fois le vault prêt
     import uvicorn

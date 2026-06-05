@@ -1,6 +1,6 @@
-# AI OS — dépendances (chemin critique, sans PyTorch)
-# Python 3.10+ requis.
-# Embeddings via fastembed (ONNX, ~50 Mo) au lieu de sentence-transformers (~2 Go).
+# Obsidian Chat Memory — dependencies (lean stack, no PyTorch)
+# Python 3.10+ required.
+# Embeddings via fastembed (ONNX, ~50 MB) instead of sentence-transformers (~2 GB).
 
 fastapi>=0.136
 uvicorn[standard]>=0.48
@@ -12,5 +12,5 @@ fastembed>=0.8
 google-genai>=2.7
 python-dotenv>=1.0
 
-# Optionnel : serveur MCP (pour Claude Desktop)
+# Optional: MCP server (for Claude Desktop)
 mcp>=1.27
