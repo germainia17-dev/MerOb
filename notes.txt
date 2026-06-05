@@ -1,3 +1,0 @@
-Germain travaille sur un OS IA personnel.
-Il utilise Obsidian.
-Il veut créer un assistant intelligent local.
