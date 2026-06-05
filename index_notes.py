@@ -8,19 +8,19 @@ client = chromadb.PersistentClient(path="chroma_db")
 
 collection = client.get_or_create_collection(name="notes")
 
-dossier_notes = Path("notes")
+notes_dir = Path("notes")
 
-for fichier in dossier_notes.rglob("*.md"):
-    texte = fichier.read_text()
+for file in notes_dir.rglob("*.md"):
+    text = file.read_text()
 
-    embedding = model.encode(texte).tolist()
+    embedding = model.encode(text).tolist()
 
     collection.add(
-        documents=[texte],
+        documents=[text],
         embeddings=[embedding],
-        ids=[str(fichier)]
+        ids=[str(file)]
     )
 
-    print(f"Ajouté : {fichier}")
+    print(f"Added: {file}")
 
-print("Index terminé.")
+print("Indexing complete.")

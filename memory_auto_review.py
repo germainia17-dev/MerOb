@@ -1,24 +1,24 @@
 """
 memory_auto_review.py
 ─────────────────────
-Traite automatiquement les mémoires extraites.
+Automatically processes the extracted memories.
 
-Pour chaque mémoire validée :
-  - NEW      → une note .md individuelle créée dans Memories/
-  - DOUBLON  → ignorée silencieusement
-  - UPDATE   → la note existante mise à jour
+For each validated memory:
+  - NEW       → an individual .md note is created in Memories/
+  - DUPLICATE → silently skipped
+  - UPDATE    → the existing note is updated
 
-Chaque note contient :
-  - Le texte de la mémoire
-  - Sa date d'extraction
-  - Un wikilink [[Catégorie]] vers sa catégorie hub
-  - Des wikilinks [[Mémoire proche]] vers les 2 mémoires les plus similaires
-  → Le graph Obsidian forme un réseau organique
+Each note contains:
+  - The memory text
+  - Its capture date
+  - A [[Category]] wikilink to its category hub
+  - [[Related memory]] wikilinks to the 2 most similar memories
+  → The Obsidian graph forms an organic network
 
-Les notes de catégorie (hub) sont mises à jour automatiquement
-avec la liste des mémoires qu'elles contiennent.
+Category (hub) notes are updated automatically with the list of
+memories they contain.
 
-Zéro appel API. Zéro interaction humaine.
+Zero API calls. Zero human interaction.
 """
 
 from pathlib import Path
@@ -36,82 +36,85 @@ import sys
 # CONFIG
 # ======================
 
-DOUBLON_THRESHOLD = 0.92   # ≥ → doublon certain (plus strict car notes individuelles)
-UPDATE_THRESHOLD  = 0.70   # entre les deux → mise à jour
-RELATED_N         = 2      # nombre de liens vers mémoires proches
+DOUBLON_THRESHOLD = 0.92   # ≥ → certain duplicate (stricter, since notes are individual)
+UPDATE_THRESHOLD  = 0.70   # between the two → update
+RELATED_N         = 2      # number of links to nearby memories
 
-# Seuil de confiance de classement (RÉGLAGE CLÉ de la Phase B) :
-#   score ≥ seuil  → la mémoire rejoint une catégorie fixe (match confiant)
-#   score < seuil  → la mémoire part dans "À trier" = pool de découverte
-# Plus le seuil est HAUT, plus l'IA met de mémoires de côté pour créer de
-# nouvelles catégories (mais plus le 'À trier' se remplit). Vraies mémoires de
-# catégorie ≈ 0.46 ; sujets étrangers ≈ 0.36-0.44. 0.40 = compromis prudent.
-CONFIDENT_THRESHOLD = 0.40
+# Classification confidence threshold — FALLBACK only.
+# Primary categorization comes from the extraction step: Gemini tags each
+# memory with a category. This local embedding classifier is the fallback
+# for memories that arrive WITHOUT a tag (e.g. via MCP or manual entry):
+#   score ≥ threshold → the memory joins the closest fixed category
+#   score < threshold → the memory goes to "Unsorted" = discovery pool
+# Tuned for English all-MiniLM-L6-v2 cosine scores (in-category ≈ 0.20-0.30).
+CONFIDENT_THRESHOLD = 0.18
 
-# --- Phase B : découverte auto de catégories (mode hybride) ---
-NEW_CAT_MIN_SIZE   = 3     # nb min de mémoires "À trier" similaires pour créer une catégorie
-NEW_CAT_DISTANCE   = 0.56  # distance cosinus max intra-cluster (linkage complete)
-# Filtre anti-intrus : similarité moyenne min aux autres membres du cluster.
-# Volontairement bas (0.40) — il écarte les intrus évidents sans sacrifier les
-# vrais membres. Une mémoire vraiment limite peut occasionnellement rejoindre une
-# catégorie voisine : c'est récupérable en 1 clic et s'auto-corrige avec plus de données.
+# --- Phase B: automatic category discovery (hybrid mode) ---
+NEW_CAT_MIN_SIZE   = 3     # min number of similar "Unsorted" memories to create a category
+NEW_CAT_DISTANCE   = 0.56  # max intra-cluster cosine distance (complete linkage)
+# Outlier filter: minimum average similarity to the other cluster members.
+# Deliberately low (0.40) — it removes obvious outliers without sacrificing
+# genuine members. A truly borderline memory may occasionally join a neighboring
+# category: that is fixable in one click and self-corrects with more data.
 NEW_CAT_MEMBER_SIM = 0.40
 
-TRIAGE_CAT = "À trier"
+TRIAGE_CAT = "Unsorted"
 
-# Le dossier des mémoires est résolu dynamiquement (env / config.json /
-# auto-détection Obsidian) — jamais codé en dur. Voir config.py.
+# The memory folder is resolved dynamically (env / config.json /
+# Obsidian auto-detection) — never hardcoded. See config.py.
 import config
 
 VAULT = config.resolve_vault()
-MEMORIES_DIR   = (VAULT / "Memories")   if VAULT else None  # une note par mémoire
-CATEGORIES_DIR = (VAULT / "Categories") if VAULT else None  # notes hub par catégorie
+MEMORIES_DIR   = (VAULT / "Memories")   if VAULT else None  # one note per memory
+CATEGORIES_DIR = (VAULT / "Categories") if VAULT else None  # hub note per category
 
-inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
-log_path   = Path("AI_OS/Inbox/dernier_ajout.md")
+inbox_path = Path(".data/inbox/memories_to_review.md")
+log_path   = Path(".data/inbox/last_run.md")
 
 # ======================
-# CATÉGORIES SÉMANTIQUES
+# SEMANTIC CATEGORIES
 # ======================
 
 CATEGORIES = {
-    "Identité": (
-        "qui est la personne : nom, prénom, âge, ville, lycée, classe STI2D, "
-        "apparence physique, taille, style vestimentaire, coupe de cheveux, "
-        "personnalité, loisirs, passions, ski, snowboard, gaming, jeux vidéo, "
-        "musique, rap, habitudes personnelles, goûts, préférences de vie"
+    "Identity": (
+        "who the person is: name, age, location, background, occupation, "
+        "studies, role, personality, hobbies, passions, interests, "
+        "lifestyle, personal tastes and life preferences"
     ),
-    "Projets": (
-        "projet concret construit ou développé : prothèse, impression 3D, "
-        "assistant IA, application, prototype, démo, livrable, "
-        "objectif de projet, certification, deadline, VivaTech"
+    "Projects": (
+        "a concrete project being built or developed: app, product, website, "
+        "prototype, demo, deliverable, side project, startup, "
+        "project goal, milestone, deadline, launch"
     ),
-    "Réflexions": (
-        "décision prise, choix d'architecture, idée à explorer, questionnement, "
-        "stratégie, considération, raisonnement, prise de position, analyse"
+    "Ideas": (
+        "a decision made, design choice, idea to explore, open question, "
+        "strategy, plan, consideration, reasoning, stance, analysis, reflection"
     ),
-    "Apprentissages": (
-        "connaissance technique apprise, concept compris, leçon, "
-        "RAG, embeddings, vecteurs, tokens, IA, ingénierie logicielle, "
-        "notion technique, principe réutilisable"
+    "Learnings": (
+        "a technical concept learned, lesson understood, reusable principle, "
+        "insight, fact worth remembering, how something works, "
+        "knowledge gained from experience"
     ),
-    "Outils": (
-        "outil ou technologie utilisée : logiciel, langage, framework, script, "
-        "Obsidian, Python, FastAPI, ChromaDB, Gemini, Claude, Claude Code, "
-        "ChatGPT, Raspberry Pi, n8n, Micro:bit, Adalo, VS Code, ContextOptimizer"
+    "Tools": (
+        "a tool or technology the person uses: software, programming language, "
+        "framework, library, app, service, platform, hardware, workflow, command"
     ),
-    "Erreurs": (
-        "défaut personnel, point faible, mauvaise habitude, difficulté récurrente, "
-        "éparpillement, procrastination, distraction, difficulté à terminer"
+    "Habits": (
+        "a personal trait, strength, weakness, recurring difficulty, "
+        "work habit, routine, or preference in how the person likes to work"
     ),
     "Sources": (
-        "source externe, lien, URL, article, documentation, ressource à consulter"
+        "an external source: link, URL, article, book, paper, documentation, "
+        "video, or reference to read or check later"
     ),
 }
 
-# Catégories découvertes par l'IA (mode hybride), persistées entre les runs.
-# Format : { "NomCatégorie": "description = mémoires fondatrices concaténées" }
-DISCOVERED_PATH = Path("AI_OS/discovered_categories.json")
+# Valid category names the extraction step may tag a memory with.
+VALID_CATS = set(CATEGORIES.keys())
+
+# Categories discovered by the tool (hybrid mode), persisted across runs.
+# Format: { "CategoryName": "description = concatenated founding memories" }
+DISCOVERED_PATH = Path(".data/discovered_categories.json")
 
 
 def load_discovered() -> dict:
@@ -131,14 +134,14 @@ def save_discovered(d: dict) -> None:
 DISCOVERED = load_discovered()
 
 # ======================
-# CHARGEMENT MODÈLE
+# MODEL LOADING
 # ======================
 
 model = Embedder()
 
 
 def build_category_index():
-    """Index de classification = catégories fixes + catégories découvertes."""
+    """Classification index = fixed categories + discovered categories."""
     keys  = list(CATEGORIES.keys()) + list(DISCOVERED.keys())
     descs = list(CATEGORIES.values()) + list(DISCOVERED.values())
     embs  = model.encode(descs)
@@ -149,25 +152,25 @@ _category_keys, _category_embs = build_category_index()
 
 
 # ======================
-# UTILITAIRES
+# UTILITIES
 # ======================
 
 def slugify(text: str, max_len: int = 50) -> str:
-    """Transforme un texte en nom de fichier propre."""
-    # Supprime le markdown gras/italique
+    """Turns a piece of text into a clean filename."""
+    # Remove bold/italic markdown
     text = re.sub(r"\*+", "", text)
-    # Supprime les caractères spéciaux, garde lettres/chiffres/espaces
+    # Remove special characters, keep letters/digits/spaces
     text = re.sub(r"[^\w\s\-àâäéèêëïîôùûüçœæ]", " ", text, flags=re.UNICODE)
-    # Collapse les espaces
+    # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
-    # Tronque proprement
+    # Truncate cleanly
     if len(text) > max_len:
         text = text[:max_len].rsplit(" ", 1)[0]
     return text.strip()
 
 
 def is_junk(memory: str) -> bool:
-    """Détecte les fragments inutiles : titres vides, '...', lignes trop courtes."""
+    """Detects useless fragments: empty headings, '...', lines that are too short."""
     m = memory.strip()
     if not m or m in ("...", "…"):
         return True
@@ -179,9 +182,32 @@ def is_junk(memory: str) -> bool:
     return False
 
 
+# Matches an optional leading category tag: "[Tools] ...", "(tools) - ...", "**[Tools]**: ..."
+_CAT_PREFIX = re.compile(r"^\**\s*[\[\(]\s*([A-Za-z]+)\s*[\]\)]\**\s*[:\-]?\s*(.+)$", re.DOTALL)
+
+
+def parse_category_tag(text: str):
+    """Splits an optional leading [Category] tag from a memory line.
+
+    Returns (clean_text, category_or_None). The category is only returned
+    when it matches a known category (or maps to Unsorted); otherwise the
+    original text is kept untouched so we never eat a real bracket.
+    """
+    m = _CAT_PREFIX.match(text)
+    if not m:
+        return text, None
+    cand = m.group(1).strip().capitalize()
+    body = m.group(2).strip()
+    if cand in VALID_CATS:
+        return body, cand
+    if cand.lower() in ("unsorted", "other", "misc", "none", "uncategorized"):
+        return body, TRIAGE_CAT
+    return text, None  # not a real category tag → keep original text
+
+
 def detect_category(memory: str) -> str:
-    """Classe la mémoire vers la catégorie la plus proche.
-    Retourne TRIAGE_CAT si score trop bas."""
+    """Classifies the memory into the closest category.
+    Returns TRIAGE_CAT if the score is too low."""
     emb    = model.encode([memory])
     scores = cosine_similarity(emb, _category_embs)[0]
     idx    = int(np.argmax(scores))
@@ -191,38 +217,40 @@ def detect_category(memory: str) -> str:
 
 
 # ======================
-# PHASE B — DÉCOUVERTE DE CATÉGORIES (hybride)
+# PHASE B — CATEGORY DISCOVERY (hybrid)
 # ======================
 
-# Mots vides français à ignorer pour nommer une catégorie
-_FR_STOP = {
-    "dans", "pour", "avec", "cette", "celui", "celle", "leur", "leurs", "elle",
-    "être", "avoir", "faire", "plus", "moins", "très", "alors", "donc", "mais",
-    "comme", "tout", "tous", "toute", "toutes", "aussi", "entre", "sans", "sous",
-    "chez", "vers", "depuis", "pendant", "selon", "afin", "lorsqu", "quand",
-    "utilisateur", "user", "germain", "veut", "doit", "peut", "ses", "son", "une",
-    "des", "les", "que", "qui", "est", "sont", "aux", "par", "sur", "the",
+# Common stopwords to ignore when naming a category (English-first, a few FR kept).
+_STOPWORDS = {
+    "the", "and", "for", "with", "this", "that", "from", "have", "has", "had",
+    "was", "were", "will", "would", "your", "you", "our", "its", "are", "can",
+    "could", "should", "their", "them", "they", "she", "his", "her", "him",
+    "about", "into", "over", "than", "then", "when", "what", "which", "who",
+    "whom", "user", "wants", "want", "needs", "need", "must", "uses", "use",
+    "using", "like", "also", "very", "more", "most", "some", "such",
+    "between", "without", "during", "after", "before", "while", "because",
+    "dans", "pour", "avec", "cette", "veut", "doit", "peut", "une", "des", "les",
 }
 
 
 def name_cluster(texts: list) -> str:
-    """Nomme une catégorie à partir du mot fort le plus fréquent (0 API).
-    Phase C pourra remplacer ce nommage par un appel Gemini."""
+    """Names a category from the most frequent strong word (0 API).
+    A later phase could replace this naming with a Gemini call."""
     counts = {}
     for t in texts:
         for w in re.findall(r"[a-zàâäéèêëïîôùûüçœ]{4,}", t.lower()):
-            if w in _FR_STOP:
+            if w in _STOPWORDS:
                 continue
             counts[w] = counts.get(w, 0) + 1
     if not counts:
-        return "Divers"
+        return "Misc"
     top = max(counts, key=counts.get)
     return top.capitalize()
 
 
 def discover_categories(triage_notes: list) -> dict:
-    """Cherche des grappes denses dans le pool 'À trier'.
-    Retourne {nom_catégorie: [notes]} pour chaque grappe assez grosse."""
+    """Looks for dense clusters in the 'Unsorted' pool.
+    Returns {category_name: [notes]} for each cluster that is big enough."""
     if len(triage_notes) < NEW_CAT_MIN_SIZE:
         return {}
 
@@ -237,7 +265,7 @@ def discover_categories(triage_notes: list) -> dict:
     )
     labels = clustering.fit_predict(embs)
 
-    # Regroupe (note, embedding) par cluster
+    # Group (note, embedding) by cluster
     clusters = {}
     for note, emb, label in zip(triage_notes, embs, labels):
         clusters.setdefault(int(label), []).append((note, emb))
@@ -247,8 +275,8 @@ def discover_categories(triage_notes: list) -> dict:
         if len(items) < NEW_CAT_MIN_SIZE:
             continue
 
-        # Filtre les intrus : similarité moyenne de chaque membre aux AUTRES
-        # (leave-one-out) — robuste car un intrus ne peut pas gonfler son propre score
+        # Filter outliers: average similarity of each member to the OTHERS
+        # (leave-one-out) — robust, since an outlier cannot inflate its own score
         member_embs = np.array([e for _, e in items])
         sim_matrix  = cosine_similarity(member_embs)
         np.fill_diagonal(sim_matrix, np.nan)
@@ -259,7 +287,7 @@ def discover_categories(triage_notes: list) -> dict:
             continue
 
         name = name_cluster([m["memory"] for m in kept])
-        # éviter une collision avec une catégorie existante
+        # avoid a collision with an existing category
         if name in CATEGORIES or name in DISCOVERED or name in discovered:
             name = f"{name} (auto)"
         discovered[name] = kept
@@ -267,19 +295,19 @@ def discover_categories(triage_notes: list) -> dict:
 
 
 # ======================
-# LECTURE / ÉCRITURE NOTES
+# NOTE READING / WRITING
 # ======================
 
 def get_all_memory_notes() -> list:
-    """Lit toutes les notes de mémoire existantes.
-    Retourne liste de {slug, memory, category, date, path}."""
+    """Reads all existing memory notes.
+    Returns a list of {slug, memory, category, date, path}."""
     notes = []
     if not MEMORIES_DIR.exists():
         return notes
     for f in MEMORIES_DIR.glob("*.md"):
         text = f.read_text(encoding="utf-8")
         lines = text.splitlines()
-        # La mémoire est dans la première ligne non-vide non-frontmatter
+        # The memory is on the first non-empty, non-frontmatter line
         memory_text = ""
         in_front = False
         for line in lines:
@@ -292,7 +320,7 @@ def get_all_memory_notes() -> list:
                 memory_text = line.strip()
                 break
         if memory_text:
-            # Extraire la catégorie depuis les wikilinks
+            # Extract the category from the wikilinks
             cat_match = re.search(r"\[\[([^\]]+)\]\]", text)
             cat = cat_match.group(1) if cat_match else TRIAGE_CAT
             notes.append({
@@ -305,26 +333,26 @@ def get_all_memory_notes() -> list:
 
 
 def memory_to_filename(memory: str) -> str:
-    """Génère un nom de fichier unique depuis le texte d'une mémoire."""
+    """Generates a unique filename from a memory's text."""
     slug = slugify(memory, max_len=55)
     return slug + ".md"
 
 
 def find_related(memory: str, all_notes: list, n: int = RELATED_N) -> list:
-    """Trouve les N mémoires les plus proches (excluant les doublons)."""
+    """Finds the N closest memories (excluding duplicates)."""
     if not all_notes:
         return []
     texts = [note["memory"] for note in all_notes]
     mem_emb   = model.encode([memory])
     all_embs  = model.encode(texts)
     scores    = cosine_similarity(mem_emb, all_embs)[0]
-    # Exclure la mémoire elle-même (score = 1.0)
+    # Exclude the memory itself (score = 1.0)
     sorted_idx = np.argsort(scores)[::-1]
     related = []
     for idx in sorted_idx:
-        if scores[idx] > 0.98:   # c'est la même mémoire
+        if scores[idx] > 0.98:   # this is the same memory
             continue
-        if scores[idx] < 0.30:  # trop peu lié
+        if scores[idx] < 0.30:  # too weakly related
             break
         related.append(all_notes[idx]["slug"])
         if len(related) >= n:
@@ -333,7 +361,7 @@ def find_related(memory: str, all_notes: list, n: int = RELATED_N) -> list:
 
 
 def write_memory_note(memory: str, category: str, date: str, related_slugs: list) -> Path:
-    """Crée ou met à jour la note individuelle d'une mémoire."""
+    """Creates or updates the individual note for a memory."""
     MEMORIES_DIR.mkdir(parents=True, exist_ok=True)
     filename = memory_to_filename(memory)
     path     = MEMORIES_DIR / filename
@@ -343,13 +371,13 @@ def write_memory_note(memory: str, category: str, date: str, related_slugs: list
     lines = [
         f"> {memory}",
         "",
-        f"**Catégorie :** [[{category}]]",
+        f"**Category:** [[{category}]]",
     ]
     if related_links:
-        lines.append(f"**Liens :** {related_links}")
+        lines.append(f"**Links:** {related_links}")
     lines += [
         "",
-        f"*Extrait le {date}*",
+        f"*Captured on {date}*",
     ]
 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -357,13 +385,13 @@ def write_memory_note(memory: str, category: str, date: str, related_slugs: list
 
 
 def update_category_hub(category: str, all_notes: list) -> None:
-    """Met à jour la note hub d'une catégorie avec tous ses membres."""
+    """Updates a category's hub note with all its members."""
     CATEGORIES_DIR.mkdir(parents=True, exist_ok=True)
     path = CATEGORIES_DIR / f"{category}.md"
 
     members = [n for n in all_notes if n["category"] == category]
 
-    lines = [f"# {category}", "", f"*{len(members)} mémoire(s)*", ""]
+    lines = [f"# {category}", "", f"*{len(members)} memory(ies)*", ""]
     for m in members:
         lines.append(f"- [[{m['slug']}]]")
     lines.append("")
@@ -372,7 +400,7 @@ def update_category_hub(category: str, all_notes: list) -> None:
 
 
 def reconcile(new_memory: str, existing_notes: list) -> dict:
-    """Cherche si la mémoire est un doublon ou une mise à jour."""
+    """Checks whether the memory is a duplicate or an update."""
     if not existing_notes:
         return {"classification": "NEW", "match": None, "score": 0.0}
 
@@ -384,20 +412,20 @@ def reconcile(new_memory: str, existing_notes: list) -> dict:
     best_score = float(scores[best_idx])
 
     if best_score >= DOUBLON_THRESHOLD:
-        return {"classification": "DOUBLON", "match": existing_notes[best_idx], "score": best_score}
+        return {"classification": "DUPLICATE", "match": existing_notes[best_idx], "score": best_score}
     elif best_score >= UPDATE_THRESHOLD:
-        return {"classification": "UPDATE",  "match": existing_notes[best_idx], "score": best_score}
+        return {"classification": "UPDATE",    "match": existing_notes[best_idx], "score": best_score}
     else:
-        return {"classification": "NEW",     "match": None,                     "score": best_score}
+        return {"classification": "NEW",       "match": None,                     "score": best_score}
 
 
 # ======================
-# PIPELINE PRINCIPAL
+# MAIN PIPELINE
 # ======================
 
 def main():
     if not inbox_path.exists():
-        print("Aucune inbox trouvée.")
+        print("No inbox found.")
         return
 
     if VAULT is None or not VAULT.exists():
@@ -410,47 +438,50 @@ def main():
 
     for line in content.splitlines():
         if line.startswith("- [ ] "):
-            memory = line.replace("- [ ] ", "").strip()
-            if not memory:
+            body = line.replace("- [ ] ", "").strip()
+            if not body:
                 continue
+            memory, cat_hint = parse_category_tag(body)
             if is_junk(memory):
                 skipped_junk += 1
                 continue
-            raw_memories.append(memory)
+            raw_memories.append((memory, cat_hint))
 
     if not raw_memories:
-        print("Aucune mémoire à traiter.")
+        print("No memories to process.")
         return
 
     today = datetime.now().strftime("%Y-%m-%d")
-    print(f"\n→ {len(raw_memories)} mémoire(s) à traiter (+ {skipped_junk} fragment(s) ignoré(s))")
-    print(f"→ Vault : {VAULT.name}")
+    print(f"\n→ {len(raw_memories)} memory(ies) to process (+ {skipped_junk} fragment(s) skipped)")
+    print(f"→ Vault: {VAULT.name}")
 
-    # Charge les notes existantes
+    # Load existing notes
     existing_notes = get_all_memory_notes()
-    print(f"→ {len(existing_notes)} notes déjà présentes dans Memories/\n")
+    print(f"→ {len(existing_notes)} notes already in Memories/\n")
 
     added_list     = []
     updated_list   = []
     duplicate_list = []
 
-    for memory in raw_memories:
+    for memory, cat_hint in raw_memories:
         result         = reconcile(memory, existing_notes)
         classification = result["classification"]
         match          = result["match"]
 
-        if classification == "DOUBLON":
+        if classification == "DUPLICATE":
             duplicate_list.append(memory)
-            print(f"  [DOUBLON]  {memory[:65]}")
+            print(f"  [DUPLICATE]  {memory[:65]}")
             continue
 
-        category = detect_category(memory)
+        # Use the category tagged by the extraction step; fall back to the
+        # local embedding classifier when there is no (valid) tag.
+        category = cat_hint or detect_category(memory)
 
         if classification == "UPDATE" and match:
-            # Supprimer l'ancienne note et réécrire
+            # Remove the old note and rewrite
             if match["path"].exists():
                 match["path"].unlink()
-            # Mettre à jour dans existing_notes pour les liens
+            # Update in existing_notes so links stay correct
             for n in existing_notes:
                 if n["memory"] == match["memory"]:
                     n["memory"]   = memory
@@ -460,7 +491,7 @@ def main():
             print(f"  [UPDATE → {category}]  {memory[:55]}")
 
         if classification == "NEW" or classification == "UPDATE":
-            # Liens vers mémoires proches (sur les notes existantes à ce moment)
+            # Links to nearby memories (against the notes existing at this point)
             others  = [n for n in existing_notes if n["memory"] != memory]
             related = find_related(memory, others)
 
@@ -473,14 +504,14 @@ def main():
                 added_list.append({"memory": memory, "category": category, "slug": slug})
                 print(f"  [NEW → {category}]  {memory[:55]}")
 
-    # --- Phase B : l'IA fait émerger de nouvelles catégories ---
+    # --- Phase B: let new categories emerge ---
     created_cats = []
     triage_notes = [n for n in existing_notes if n["category"] == TRIAGE_CAT]
     new_cats = discover_categories(triage_notes)
 
     if new_cats:
         for name, members in new_cats.items():
-            # La description sert aux classifications futures
+            # The description feeds future classifications
             DISCOVERED[name] = " / ".join(m["memory"] for m in members)[:500]
             for m in members:
                 m["category"] = name
@@ -488,15 +519,15 @@ def main():
                 related = find_related(m["memory"], others)
                 write_memory_note(m["memory"], name, today, related)
             created_cats.append((name, len(members)))
-            print(f"  [NOUVELLE CATÉGORIE → {name}]  {len(members)} mémoires regroupées")
+            print(f"  [NEW CATEGORY → {name}]  {len(members)} memories grouped")
         save_discovered(DISCOVERED)
 
-    # Met à jour tous les hubs de catégorie
+    # Update all category hubs
     all_cats = set(n["category"] for n in existing_notes)
     for cat in all_cats:
         update_category_hub(cat, existing_notes)
 
-    # Nettoie les hubs devenus vides (ex : 'À trier' vidé par la découverte)
+    # Clean up hubs that became empty (e.g. 'Unsorted' emptied by discovery)
     if CATEGORIES_DIR.exists():
         for hub in CATEGORIES_DIR.glob("*.md"):
             if hub.stem not in all_cats:
@@ -510,32 +541,32 @@ def write_log(raw, added, updated, duplicates, created_cats=None):
     created_cats = created_cats or []
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
-        f"# Dernier ajout — {now}",
+        f"# Last run — {now}",
         "",
-        f"**Traitées** : {len(raw)}  |  "
-        f"**Ajoutées** : {len(added)}  |  "
-        f"**Mises à jour** : {len(updated)}  |  "
-        f"**Doublons ignorés** : {len(duplicates)}",
+        f"**Processed**: {len(raw)}  |  "
+        f"**Added**: {len(added)}  |  "
+        f"**Updated**: {len(updated)}  |  "
+        f"**Duplicates skipped**: {len(duplicates)}",
         "",
     ]
     if created_cats:
-        lines += ["## 🆕 Nouvelles catégories créées par l'IA", ""]
+        lines += ["## 🆕 New categories discovered", ""]
         for name, count in created_cats:
-            lines.append(f"- **[[{name}]]** — {count} mémoires regroupées")
+            lines.append(f"- **[[{name}]]** — {count} memories grouped")
         lines.append("")
     if added:
-        lines += ["## ✅ Nouvelles notes", ""]
+        lines += ["## ✅ New notes", ""]
         for item in added:
             lines.append(f"- **{item['category']}** — [[{item['slug']}]]")
         lines.append("")
     if updated:
-        lines += ["## 🔄 Mises à jour", ""]
+        lines += ["## 🔄 Updates", ""]
         for item in updated:
             lines.append(f"- **{item['category']}** — {item['new'][:60]}")
-            lines.append(f"  *(remplace : {item['old'][:60]})*")
+            lines.append(f"  *(replaces: {item['old'][:60]})*")
         lines.append("")
     if duplicates:
-        lines += ["## ⏭ Doublons ignorés", ""]
+        lines += ["## ⏭ Duplicates skipped", ""]
         for m in duplicates:
             lines.append(f"- {m}")
         lines.append("")
@@ -544,18 +575,18 @@ def write_log(raw, added, updated, duplicates, created_cats=None):
 
 def print_summary(raw, added, updated, duplicates, created_cats=None):
     created_cats = created_cats or []
-    print(f"\n===== RÉSUMÉ =====")
-    print(f"Traitées       : {len(raw)}")
-    print(f"Nouvelles notes: {len(added)}")
-    print(f"Mises à jour   : {len(updated)}")
-    print(f"Doublons       : {len(duplicates)}")
+    print(f"\n===== SUMMARY =====")
+    print(f"Processed      : {len(raw)}")
+    print(f"New notes      : {len(added)}")
+    print(f"Updated        : {len(updated)}")
+    print(f"Duplicates     : {len(duplicates)}")
     if created_cats:
-        print(f"Catégories créées par l'IA : {len(created_cats)} "
+        print(f"Categories discovered: {len(created_cats)} "
               f"({', '.join(n for n, _ in created_cats)})")
-    print(f"Appels API     : 0")
-    print(f"\nNotes créées dans : Memories/")
-    print(f"Hubs mis à jour dans : Categories/")
-    print(f"Log : AI_OS/Inbox/dernier_ajout.md")
+    print(f"API calls      : 0")
+    print(f"\nNotes written to: Memories/")
+    print(f"Hubs updated in : Categories/")
+    print(f"Log: .data/inbox/last_run.md")
 
 
 if __name__ == "__main__":

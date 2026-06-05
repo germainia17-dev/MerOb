@@ -1,15 +1,15 @@
 """
 run.py
 ──────
-Point d'entrée unique d'Obsidian Chat Memory (macOS / Windows / Linux).
+Single entry point for Obsidian Chat Memory (macOS / Windows / Linux).
 
   python run.py
 
-  1. Au premier lancement, configure le vault Obsidian (auto-détection
-     ou saisie manuelle), puis le mémorise dans config.json.
-  2. Démarre le serveur local sur http://localhost:8000
+  1. On first launch, configures the Obsidian vault (auto-detection
+     or manual input), then remembers it in config.json.
+  2. Starts the local server on http://localhost:8000
 
-Plus besoin de launchd : un simple `python run.py` suffit sur tous les OS.
+No more launchd: a simple `python run.py` works on every OS.
 """
 
 import sys
@@ -40,7 +40,7 @@ def main():
     print("→ Obsidian Chat Memory server: http://localhost:8000")
     print("  (keep this window open; Ctrl+C to stop)\n")
 
-    # Import tardif : uvicorn/server ne se chargent qu'une fois le vault prêt
+    # Late import: uvicorn/server only load once the vault is ready
     import uvicorn
     uvicorn.run("server:app", host="127.0.0.1", port=8000, log_level="info")
 

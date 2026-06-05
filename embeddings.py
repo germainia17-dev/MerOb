@@ -1,16 +1,16 @@
 """
 embeddings.py
 ─────────────
-Wrapper d'embeddings basé sur fastembed (ONNX) au lieu de
+Embedding wrapper built on fastembed (ONNX) instead of
 sentence-transformers (PyTorch).
 
-Pourquoi : sentence-transformers tire PyTorch (~440 Mo sur Mac, ~2 Go avec
-les libs CUDA sur Linux) → mur d'installation pour les nouveaux utilisateurs.
-fastembed utilise le MÊME modèle (all-MiniLM-L6-v2) en ONNX : ~50 Mo,
-démarrage plus rapide, zéro PyTorch.
+Why: sentence-transformers pulls in PyTorch (~440 MB on Mac, ~2 GB with
+the CUDA libs on Linux) → an install wall for new users.
+fastembed uses the SAME model (all-MiniLM-L6-v2) in ONNX: ~50 MB,
+faster startup, zero PyTorch.
 
-L'API .encode() reproduit celle de SentenceTransformer pour ne rien casser
-dans le reste du code (server.py, memory_auto_review.py).
+The .encode() API mirrors SentenceTransformer's so nothing else in the
+codebase (server.py, memory_auto_review.py) needs to change.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ _model = None
 
 
 def _get_model():
-    """Charge le modèle ONNX une seule fois (téléchargé au 1er appel)."""
+    """Loads the ONNX model once (downloaded on first call)."""
     global _model
     if _model is None:
         from fastembed import TextEmbedding
@@ -32,11 +32,11 @@ def _get_model():
 
 
 class Embedder:
-    """Compatible avec SentenceTransformer.encode().
+    """Compatible with SentenceTransformer.encode().
 
-    - encode("texte")        → vecteur 1D
-    - encode(["a", "b"])     → matrice 2D (n, dim)
-    Les vecteurs fastembed sont déjà normalisés (norme L2 = 1).
+    - encode("text")     → 1D vector
+    - encode(["a", "b"])  → 2D matrix (n, dim)
+    fastembed vectors are already normalized (L2 norm = 1).
     """
 
     def encode(self, texts):
