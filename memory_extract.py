@@ -15,54 +15,65 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 conversation_path = Path("conversation.txt")
-inbox_path = Path("AI_OS/Inbox/memories_to_review.md")
+inbox_path = Path(".data/inbox/memories_to_review.md")
 
 inbox_path.parent.mkdir(parents=True, exist_ok=True)
 
 conversation = conversation_path.read_text(encoding="utf-8")
 
 prompt = f"""
-Tu es le module mémoire d'un assistant IA personnel.
+You are the memory module of a personal AI assistant.
 
-Analyse cette conversation et extrais uniquement les informations importantes à mémoriser.
+Analyze this conversation and extract only the information worth remembering
+long-term.
 
-À garder :
-- projets de l'utilisateur
-- objectifs
-- préférences de travail
-- outils utilisés
-- décisions importantes
-- connaissances durables
-- tâches utiles
+Keep:
+- the user's projects
+- goals
+- work preferences
+- tools they use
+- important decisions
+- durable knowledge
+- useful tasks
 
-À ignorer :
-- phrases inutiles
-- remerciements
-- hésitations
-- répétitions
-- détails temporaires sans intérêt
+Ignore:
+- filler
+- thanks and pleasantries
+- hesitations
+- repetitions
+- temporary details with no lasting value
 
-Retourne uniquement du Markdown propre pour Obsidian.
+Tag EACH memory with exactly one category in square brackets, chosen from:
+  [Identity]   who the user is: name, age, location, job, studies, personality, hobbies, interests
+  [Projects]   something the user is building or developing, with a goal or deadline
+  [Ideas]      a decision, choice, opinion, plan or strategy the user holds or is weighing
+  [Learnings]  a concept, lesson, technical explanation or fact the user learned
+  [Tools]      an existing software, language, framework, service or device the user uses
+  [Habits]     a personal trait, strength, weakness or behavior pattern of the user
+  [Sources]    an external link, article, book, video or doc to read or revisit
+Use [Unsorted] ONLY if none of the above clearly fit.
 
-Format obligatoire :
+Write each memory as a third-person statement about the user. Return clean
+Markdown for Obsidian only, in exactly this format:
 
-# Mémoires à valider
+# Memories to review
 
-Date : {datetime.now().strftime("%Y-%m-%d")}
+Date: {datetime.now().strftime("%Y-%m-%d")}
 
-## Haute confiance
+## High confidence
 
-- [ ] ...
+- [ ] [Tools] The user codes daily in Neovim and tmux.
+- [ ] [Identity] ...
 
-## À vérifier
+## To verify
 
-- [ ] ...
+- [ ] [Category] ...
 
-## Faible priorité
+## Low priority
 
-- [ ] ...
+- [ ] [Category] ...
 
-Conversation :
+Conversation:
 {conversation}
 """
 
@@ -75,19 +86,19 @@ result = response.text
 
 inbox_path.write_text(result, encoding="utf-8")
 
-print("Extraction terminée → AI_OS/Inbox/memories_to_review.md")
-print("Lancement de la validation automatique…")
+print("Extraction complete → .data/inbox/memories_to_review.md")
+print("Running automatic review…")
 
-# Validation automatique — zéro interaction, zéro appel API supplémentaire
+# Automatic review — zero interaction, zero extra API call
 auto_review = Path(__file__).parent / "memory_auto_review.py"
 proc = subprocess.run(
     [sys.executable, str(auto_review)],
-    capture_output=False,   # affiche les logs en temps réel
+    capture_output=False,   # stream logs in real time
     text=True,
 )
 
 if proc.returncode != 0:
-    print("Avertissement : la validation automatique a échoué (vérifier memory_auto_review.py).")
+    print("Warning: automatic review failed (check memory_auto_review.py).")
 else:
-    print("\nMémoires enregistrées dans ton vault Obsidian (Memories/ + Categories/).")
-    print("Log lisible dans Obsidian : AI_OS/Inbox/dernier_ajout.md")
+    print("\nMemories saved to your Obsidian vault (Memories/ + Categories/).")
+    print("Readable log: .data/inbox/last_run.md")

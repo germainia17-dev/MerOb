@@ -1,14 +1,14 @@
 // ======================
 // Obsidian Chat Memory — content script
-// Fonctionne sur ChatGPT, Claude, Gemini
-// Appelle le serveur local FastAPI (localhost:8000)
+// Works on ChatGPT, Claude, Gemini
+// Calls the local FastAPI server (localhost:8000)
 // ======================
 
 const API = "http://localhost:8000";
 let panel, searchTimeout;
 
 // ======================
-// DÉTECTION DU SITE
+// SITE DETECTION
 // ======================
 
 function getSite() {
@@ -19,7 +19,7 @@ function getSite() {
   return null;
 }
 
-// Sélecteurs de la zone de saisie selon le site
+// Input-area selectors per site
 function getInputSelector() {
   const site = getSite();
   if (site === "chatgpt") return "#prompt-textarea";
@@ -29,7 +29,7 @@ function getInputSelector() {
 }
 
 // ======================
-// PANNEAU FLOTTANT
+// FLOATING PANEL
 // ======================
 
 function createPanel() {
@@ -152,7 +152,7 @@ function createPanel() {
 }
 
 // ======================
-// RECHERCHE
+// SEARCH
 // ======================
 
 async function search(query) {
@@ -190,7 +190,7 @@ async function search(query) {
 }
 
 // ======================
-// INJECTION DANS LE PROMPT
+// INJECT INTO PROMPT
 // ======================
 
 function injectIntoPrompt() {
@@ -200,7 +200,7 @@ function injectIntoPrompt() {
   if (cards.length === 0) return;
 
   const memories = cards.map(c => "- " + c.dataset.content).join("\n");
-  const context  = `[Mémoires personnelles]\n${memories}\n\n`;
+  const context  = `[Personal memories]\n${memories}\n\n`;
 
   const selector = getInputSelector();
   if (!selector) return;
@@ -208,7 +208,7 @@ function injectIntoPrompt() {
   const input = document.querySelector(selector);
   if (!input) return;
 
-  // ChatGPT utilise un textarea, Claude/Gemini un div contenteditable
+  // ChatGPT uses a textarea, Claude/Gemini a contenteditable div
   if (input.tagName === "TEXTAREA") {
     const pos = input.selectionStart || 0;
     input.value = context + input.value.slice(pos);
@@ -220,11 +220,11 @@ function injectIntoPrompt() {
 }
 
 // ======================
-// EXTRACTION EN FIN DE CONVERSATION
+// EXTRACT AT END OF CONVERSATION
 // ======================
 
 async function extractConversation() {
-  // Récupère le texte visible de la page comme proxy de la conversation
+  // Grab the page's visible text as a proxy for the conversation
   const msgs = [...document.querySelectorAll(
     '[data-message-author-role], .human-turn, .model-turn, ' +
     '.human, .assistant, [class*="message"]'
@@ -250,13 +250,13 @@ async function extractConversation() {
   } catch (e) {
     alert("⚠ Local server unreachable.\nRun: python run.py");
   } finally {
-    btn.textContent = "⬆ Extraire";
+    btn.textContent = "⬆ Extract";
     btn.disabled = false;
   }
 }
 
 // ======================
-// DRAG (déplacer le panneau)
+// DRAG (move the panel)
 // ======================
 
 function makeDraggable(panel) {
@@ -289,14 +289,14 @@ function init() {
   panel = createPanel();
   makeDraggable(panel);
 
-  // Minimiser/maximiser
+  // Minimize / maximize
   document.getElementById("aios-toggle").addEventListener("click", () => {
     panel.classList.toggle("minimized");
     document.getElementById("aios-toggle").textContent =
       panel.classList.contains("minimized") ? "+" : "−";
   });
 
-  // Recherche manuelle
+  // Manual search
   document.getElementById("aios-search").addEventListener("input", e => {
     clearTimeout(searchTimeout);
     const q = e.target.value.trim();
@@ -304,7 +304,7 @@ function init() {
     searchTimeout = setTimeout(() => search(q), 400);
   });
 
-  // Recherche auto sur la frappe dans l'input principal
+  // Auto-search as the user types in the main input
   const selector = getInputSelector();
   if (selector) {
     const observer = new MutationObserver(() => {
@@ -322,14 +322,14 @@ function init() {
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Injecter
+  // Inject
   document.getElementById("aios-inject-btn").addEventListener("click", injectIntoPrompt);
 
-  // Extraire
+  // Extract
   document.getElementById("aios-extract-btn").addEventListener("click", extractConversation);
 }
 
-// Attend que la page soit prête (les SPA chargent en retard)
+// Wait for the page to be ready (SPAs load late)
 if (document.readyState === "complete") {
   init();
 } else {

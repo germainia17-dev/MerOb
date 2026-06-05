@@ -1,15 +1,15 @@
 # Installation
 
-De zéro à fonctionnel en ~5 minutes.
+From zero to working in ~5 minutes.
 
-## Prérequis
+## Requirements
 
-- **Python 3.10+** ([télécharger](https://www.python.org/downloads/))
-- **Obsidian** avec au moins un vault ouvert
-- Un navigateur **Chrome / Edge / Brave**
-- Une **clé API Gemini** (gratuite : https://aistudio.google.com/apikey)
+- **Python 3.10+** ([download](https://www.python.org/downloads/))
+- **Obsidian** with at least one vault open
+- A **Chrome / Edge / Brave** browser
+- A **Gemini API key** (free: https://aistudio.google.com/apikey)
 
-## 1. Lancer le serveur
+## 1. Start the server
 
 ```bash
 git clone https://github.com/<you>/obsidian-chat-memory
@@ -22,43 +22,43 @@ cd obsidian-chat-memory
 start.bat
 ```
 
-Au premier lancement, le script :
-1. crée l'environnement Python et installe les dépendances,
-2. **détecte automatiquement ton vault Obsidian** (ou te demande le chemin),
-3. te demande ta **clé Gemini** (stockée dans `.env`),
-4. démarre le serveur sur http://localhost:8000.
+On first launch, the script:
+1. creates the Python environment and installs the dependencies,
+2. **auto-detects your Obsidian vault** (or asks you for the path),
+3. asks for your **Gemini key** (stored in `.env`),
+4. starts the server on http://localhost:8000.
 
-Laisse cette fenêtre ouverte. Vérifie que ça tourne :
-👉 http://localhost:8000/health doit répondre `{"status":"ok", ...}`.
+Leave this window open. Check that it's running:
+👉 http://localhost:8000/health should return `{"status":"ok", ...}`.
 
-> Pas de `start.sh` ? Équivalent manuel :
+> No `start.sh`? Manual equivalent:
 > ```bash
 > python3 -m venv venv && source venv/bin/activate
 > pip install --upgrade pip && pip install -r requirements.txt
 > python run.py
 > ```
 
-## 2. Installer l'extension navigateur
+## 2. Install the browser extension
 
-1. Ouvre `chrome://extensions`
-2. Active le **Mode développeur** (en haut à droite)
-3. Clique **Charger l'extension non empaquetée**
-4. Sélectionne le dossier `chrome_extension/`
-5. Va sur ChatGPT, Claude ou Gemini → le panneau 🧠 apparaît en bas à droite
+1. Open `chrome://extensions`
+2. Enable **Developer mode** (top right)
+3. Click **Load unpacked**
+4. Select the `chrome_extension/` folder
+5. Open ChatGPT, Claude or Gemini → the 🧠 panel appears bottom-right
 
-## 3. Utiliser
+## 3. Use it
 
-- **Capturer** : en fin de conversation, clique **⬆ Extraire**. Les mémoires
-  sont rangées automatiquement dans ton vault Obsidian (`Memories/` + `Categories/`).
-- **Réinjecter** : tape ton message — les mémoires pertinentes remontent dans le
-  panneau. Clique **⬇ Injecter** pour les coller dans le prompt.
+- **Capture**: at the end of a conversation, click **⬆ Extract**. The memories
+  are filed automatically into your Obsidian vault (`Memories/` + `Categories/`).
+- **Reinject**: type your message — relevant memories surface in the panel.
+  Click **⬇ Inject into prompt** to paste them into your prompt.
 
-## Dépannage
+## Troubleshooting
 
-| Symptôme | Solution |
+| Symptom | Fix |
 |---|---|
-| `Python 3.10+ requis` | Installe une version récente de Python |
-| Le panneau dit « Serveur inaccessible » | Le serveur n'est pas lancé → relance `./start.sh` |
-| « Clé API Gemini manquante » | Lance `python config.py` ou édite `.env` |
-| Mauvais vault détecté | Édite `config.json` (clé `"vault"`) avec le bon chemin |
-| Aucune mémoire trouvée | Vérifie `http://localhost:8000/health` → champ `vault` |
+| `Python 3.10+ required` | Install a recent version of Python |
+| Panel says "Server unreachable" | The server isn't running → re-run `./start.sh` |
+| "Gemini API key missing" | Run `python config.py` or edit `.env` |
+| Wrong vault detected | Edit `config.json` (`"vault"` key) with the correct path |
+| No memories found | Check `http://localhost:8000/health` → `vault` field |

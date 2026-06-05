@@ -30,6 +30,9 @@ own Obsidian vault as individual, linked notes. Over time, a knowledge graph gro
 > it's not in *your* files, and you can't grep it, link it, or keep it for 10 years. This is
 > *your* memory, in *your* vault.
 
+> ⭐ **If this idea resonates, star the repo** — it's the single best way to help other
+> people stop losing their best AI conversations.
+
 ## Install
 
 Full step-by-step guide in **[INSTALL.md](INSTALL.md)**. The short version:
@@ -62,7 +65,8 @@ Then load the `chrome_extension/` folder in `chrome://extensions` (Developer mod
             ▼
    Local pipeline (0 API, runs on your machine)
      • dedupe / update against existing notes
-     • classify each memory by meaning (local embeddings)
+     • file each memory into its category (tagged during extraction;
+       local embeddings as fallback)
      • write one Markdown note per memory + wikilinks
      • group related memories, discover new categories
             ▼
@@ -71,7 +75,8 @@ Then load the `chrome_extension/` folder in `chrome://extensions` (Developer mod
 
 Everything after the extraction step runs locally with
 [`fastembed`](https://github.com/qdrant/fastembed) (ONNX, ~50 MB — no PyTorch) and
-cosine similarity. No data leaves your machine for storage, search or classification.
+cosine similarity. Beyond that single extraction call, no data leaves your machine —
+storage, search, dedup and graph-building all happen locally.
 
 ### Reinjection
 
@@ -100,6 +105,12 @@ data, or a **coding-agent** memory tool. This is different on purpose:
 - [ ] Smarter category naming (occasional LLM pass)
 - [ ] Native Obsidian plugin (drop the browser-extension + server setup)
 - [ ] Conflict detection (memories that contradict older ones)
+
+## Support
+
+If this tool saves you from re-explaining yourself to every AI, **a ⭐ helps other people
+find it** — it's the simplest way to support the project. Found a bug or have an idea?
+[Open an issue](../../issues) — feedback shapes the roadmap.
 
 ## License
 

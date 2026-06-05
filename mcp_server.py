@@ -7,6 +7,8 @@ import subprocess
 import numpy as np
 import sys
 
+import config
+
 # ======================
 # CONFIG
 # ======================
@@ -14,24 +16,49 @@ import sys
 mcp         = FastMCP("Obsidian Chat Memory")
 model       = Embedder()
 chroma      = chromadb.PersistentClient(path=str(Path(__file__).parent / "chroma_db"))
-memory_dir  = Path(__file__).parent / "AI_OS/Memory"
+
+# Memories live as one .md note per memory in <vault>/Memories/ — resolved
+# dynamically (env / config.json / Obsidian auto-detection). See config.py.
+VAULT       = config.resolve_vault()
+MEMORIES_DIR = (VAULT / "Memories") if VAULT else None
 VENV_PYTHON = sys.executable
 
 
+def read_memory_note(file_path) -> str:
+    """Returns the memory text (first line starting with '> ') of a note."""
+    for line in file_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith(">"):
+            return line.lstrip("> ").strip()
+    return ""
+
+
+def load_all_memories() -> list:
+    """Loads every memory from <vault>/Memories/*.md."""
+    memories = []
+    if not MEMORIES_DIR or not MEMORIES_DIR.exists():
+        return memories
+    for file in MEMORIES_DIR.glob("*.md"):
+        text = read_memory_note(file)
+        if text:
+            memories.append({"file": file.name, "content": text})
+    return memories
+
+
 # ======================
-# OUTILS MCP
+# MCP TOOLS
 # ======================
 
 @mcp.tool()
 def search_memories(query: str, n: int = 5) -> str:
     """
-    Cherche dans les notes et mémoires personnelles de l'utilisateur.
-    Utilise la recherche vectorielle locale — aucun appel API.
-    À appeler en début de conversation pour personnaliser le contexte.
+    Search the user's personal notes and memories.
+    Uses local vector search — no API call.
+    Call this at the start of a conversation to personalize the context.
     """
     results = []
 
-    # --- ChromaDB (notes vectorisées) ---
+    # --- ChromaDB (indexed notes) ---
     try:
         collection = chroma.get_collection("notes")
         query_emb  = model.encode(query).tolist()
@@ -42,15 +69,8 @@ def search_memories(query: str, n: int = 5) -> str:
     except Exception:
         pass
 
-    # --- Mémoires validées (AI_OS/Memory/*.md) ---
-    memories = []
-
-    for file in memory_dir.glob("*.md"):
-        for line in file.read_text(encoding="utf-8").splitlines():
-            if line.startswith("- "):
-                text = line[2:].strip()
-                if text:
-                    memories.append({"file": file.name, "content": text})
+    # --- Validated memories (<vault>/Memories/*.md) ---
+    memories = load_all_memories()
 
     if memories:
         q_emb   = model.encode([query])
@@ -60,10 +80,10 @@ def search_memories(query: str, n: int = 5) -> str:
 
         for idx in top:
             if scores[idx] > 0.3:
-                results.append(f"[Mémoire — {memories[idx]['file']}]\n{memories[idx]['content']}")
+                results.append(f"[Memory — {memories[idx]['file']}]\n{memories[idx]['content']}")
 
     if not results:
-        return "Aucune mémoire trouvée pour cette requête."
+        return "No memory found for this query."
 
     return "\n\n".join(results)
 
@@ -71,38 +91,28 @@ def search_memories(query: str, n: int = 5) -> str:
 @mcp.tool()
 def count_memories() -> str:
     """
-    Retourne le nombre de mémoires stockées et combien sont en attente de validation.
+    Returns how many memories are stored and how many are pending review.
     """
-    total  = 0
-    counts = {}
+    memories = load_all_memories()
+    total    = len(memories)
 
-    for file in memory_dir.glob("*.md"):
-        n = sum(1 for l in file.read_text(encoding="utf-8").splitlines() if l.startswith("- "))
-        counts[file.name] = n
-        total += n
-
-    inbox   = Path(__file__).parent / "AI_OS/Inbox/memories_to_review.md"
+    inbox   = Path(__file__).parent / ".data/inbox/memories_to_review.md"
     pending = 0
 
     if inbox.exists():
         pending = sum(1 for l in inbox.read_text(encoding="utf-8").splitlines() if l.startswith("- [ ] "))
 
-    lines = [f"Total : {total} mémoires | En attente : {pending}"]
-    for fname, count in counts.items():
-        if count > 0:
-            lines.append(f"  - {fname} : {count}")
-
-    return "\n".join(lines)
+    return f"Total: {total} memories | Pending review: {pending}"
 
 
 @mcp.tool()
 def extract_memories(conversation: str) -> str:
     """
-    Extrait les mémoires importantes d'une conversation et les place dans l'Inbox.
-    Déclenche UN seul appel API (Gemini). À utiliser en fin de conversation.
+    Extract the important memories from a conversation into the inbox.
+    Triggers a SINGLE API call (Gemini). Use at the end of a conversation.
     """
     if not conversation.strip():
-        return "Erreur : conversation vide."
+        return "Error: empty conversation."
 
     conv_path = Path(__file__).parent / "conversation.txt"
     conv_path.write_text(conversation, encoding="utf-8")
@@ -116,16 +126,16 @@ def extract_memories(conversation: str) -> str:
         )
 
         if result.returncode != 0:
-            return f"Erreur extraction : {result.stderr}"
+            return f"Extraction error: {result.stderr}"
 
-        return "Mémoires extraites → AI_OS/Inbox/memories_to_review.md"
+        return "Memories extracted and saved to your Obsidian vault."
 
     except subprocess.TimeoutExpired:
-        return "Timeout : extraction trop longue."
+        return "Timeout: extraction took too long."
 
 
 # ======================
-# LANCEMENT
+# LAUNCH
 # ======================
 
 if __name__ == "__main__":
