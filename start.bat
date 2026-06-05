@@ -1,28 +1,28 @@
 @echo off
-REM AI OS - demarrage en une commande (Windows)
+REM Obsidian Chat Memory - one-command start (Windows)
 REM   start.bat
 cd /d "%~dp0"
 
-REM Garde-fou : Python 3.10+ requis
+REM Guard: Python 3.10+ required
 python -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" 2>nul
 if errorlevel 1 (
-  echo AI OS requiert Python 3.10+.
-  echo Installe une version recente depuis https://www.python.org/downloads/
+  echo Obsidian Chat Memory requires Python 3.10+.
+  echo Download a recent version from https://www.python.org/downloads/
   exit /b 1
 )
 
 if not exist venv (
-  echo Creation de l'environnement Python...
+  echo Creating Python environment...
   python -m venv venv
 )
 
 call venv\Scripts\activate
 
-echo Mise a jour de pip...
+echo Updating pip...
 pip install -q --upgrade pip
 
-echo Installation des dependances...
+echo Installing dependencies...
 pip install -q -r requirements.txt
 
-echo Lancement d'AI OS...
+echo Starting Obsidian Chat Memory...
 python run.py

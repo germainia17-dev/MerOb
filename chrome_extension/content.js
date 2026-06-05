@@ -39,17 +39,17 @@ function createPanel() {
     <div id="aios-header">
       <span>🧠 Obsidian Chat Memory</span>
       <div id="aios-controls">
-        <button id="aios-extract-btn" title="Extraire les mémoires de cette conversation">⬆ Extraire</button>
-        <button id="aios-toggle" title="Réduire">−</button>
+        <button id="aios-extract-btn" title="Extract memories from this conversation">⬆ Extract</button>
+        <button id="aios-toggle" title="Minimize">−</button>
       </div>
     </div>
     <div id="aios-body">
-      <input id="aios-search" placeholder="Rechercher une mémoire…" autocomplete="off"/>
+      <input id="aios-search" placeholder="Search memories…" autocomplete="off"/>
       <div id="aios-results">
-        <p class="aios-hint">Les mémoires pertinentes apparaîtront ici.</p>
+        <p class="aios-hint">Relevant memories will appear here.</p>
       </div>
       <div id="aios-inject-bar">
-        <button id="aios-inject-btn" style="display:none">⬇ Injecter dans le prompt</button>
+        <button id="aios-inject-btn" style="display:none">⬇ Inject into prompt</button>
       </div>
     </div>
   `;
@@ -157,14 +157,14 @@ function createPanel() {
 
 async function search(query) {
   const res = document.getElementById("aios-results");
-  res.innerHTML = '<p class="aios-hint">Recherche…</p>';
+  res.innerHTML = '<p class="aios-hint">Searching…</p>';
 
   try {
     const r = await fetch(`${API}/memories/search?q=${encodeURIComponent(query)}&n=5`);
     const data = await r.json();
 
     if (!data.results || data.results.length === 0) {
-      res.innerHTML = '<p class="aios-hint">Aucune mémoire trouvée.</p>';
+      res.innerHTML = '<p class="aios-hint">No memories found.</p>';
       document.getElementById("aios-inject-btn").style.display = "none";
       return;
     }
@@ -185,7 +185,7 @@ async function search(query) {
     document.getElementById("aios-inject-btn").style.display = "block";
 
   } catch (e) {
-    res.innerHTML = '<p class="aios-hint">⚠ Serveur local inaccessible.<br>Lance : uvicorn server:app --port 8000</p>';
+    res.innerHTML = '<p class="aios-hint">⚠ Local server unreachable.<br>Run: python run.py</p>';
   }
 }
 
@@ -231,12 +231,12 @@ async function extractConversation() {
   )].map(el => el.innerText).filter(Boolean).join("\n\n");
 
   if (!msgs.trim()) {
-    alert("Aucun contenu de conversation trouvé sur la page.");
+    alert("No conversation content found on this page.");
     return;
   }
 
   const btn = document.getElementById("aios-extract-btn");
-  btn.textContent = "⏳ Envoi…";
+  btn.textContent = "⏳ Sending…";
   btn.disabled = true;
 
   try {
@@ -246,9 +246,9 @@ async function extractConversation() {
       body: JSON.stringify({ conversation: msgs })
     });
     const data = await r.json();
-    alert("✅ " + (data.message || "Mémoires extraites."));
+    alert("✅ " + (data.message || "Memories extracted."));
   } catch (e) {
-    alert("⚠ Serveur local inaccessible.\nLance : uvicorn server:app --port 8000");
+    alert("⚠ Local server unreachable.\nRun: python run.py");
   } finally {
     btn.textContent = "⬆ Extraire";
     btn.disabled = false;

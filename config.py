@@ -111,38 +111,38 @@ def resolve_vault() -> Path | None:
 
 
 def interactive_setup() -> Path | None:
-    """Configuration au premier lancement (à appeler depuis un terminal)."""
-    print("\n=== Configuration Obsidian Chat Memory — dossier Obsidian ===\n")
+    """First-run interactive vault configuration (call from a terminal)."""
+    print("\n=== Obsidian Chat Memory — Vault Setup ===\n")
     vaults = detect_obsidian_vaults()
 
     if vaults:
-        print("Vaults Obsidian détectés :")
+        print("Obsidian vaults detected:")
         for i, v in enumerate(vaults, 1):
             print(f"  {i}. {v}")
-        print(f"  {len(vaults) + 1}. Autre (saisir un chemin manuellement)")
-        choice = input("\nChoix : ").strip()
+        print(f"  {len(vaults) + 1}. Other (enter path manually)")
+        choice = input("\nChoice: ").strip()
         if choice.isdigit() and 1 <= int(choice) <= len(vaults):
             chosen = vaults[int(choice) - 1]
             save_vault(chosen)
-            print(f"\n✓ Vault enregistré : {chosen}")
+            print(f"\n✓ Vault saved: {chosen}")
             return chosen
 
-    manual = input("Colle le chemin complet de ton vault Obsidian : ").strip().strip('"')
+    manual = input("Paste the full path to your Obsidian vault: ").strip().strip('"')
     if manual and Path(manual).exists():
         chosen = Path(manual)
         save_vault(chosen)
-        print(f"\n✓ Vault enregistré : {chosen}")
+        print(f"\n✓ Vault saved: {chosen}")
         return chosen
 
-    print("\n⚠ Chemin invalide. Configuration annulée.")
+    print("\n⚠ Invalid path. Setup cancelled.")
     return None
 
 
-# Message d'erreur partagé quand aucun vault n'est résolu
+# Shared error message when no vault is resolved
 NO_VAULT_MSG = (
-    "Aucun vault Obsidian configuré.\n"
-    "  → Lance la configuration :  python config.py\n"
-    "  → ou définis la variable :  export OBSIDIAN_VAULT=\"/chemin/vers/ton/vault\""
+    "No Obsidian vault configured.\n"
+    "  → Run setup:  python config.py\n"
+    "  → or set:     export OBSIDIAN_VAULT=\"/path/to/your/vault\""
 )
 
 
@@ -179,22 +179,22 @@ def save_api_key(key: str) -> None:
 
 
 def setup_api_key() -> str | None:
-    """Configuration interactive de la clé Gemini."""
-    print("\n=== Clé API Gemini (pour l'extraction des mémoires) ===")
-    print("Gratuite en 30 secondes : https://aistudio.google.com/apikey")
-    key = input("Colle ta clé Gemini (Entrée pour configurer plus tard) : ").strip()
+    """Interactive Gemini API key setup."""
+    print("\n=== Gemini API Key (required for memory extraction) ===")
+    print("Free in 30 seconds: https://aistudio.google.com/apikey")
+    key = input("Paste your Gemini key (Enter to configure later): ").strip()
     if not key:
-        print("→ Tu pourras l'ajouter plus tard dans le fichier .env")
+        print("→ You can add it later by editing the .env file")
         return None
     save_api_key(key)
-    print("✓ Clé enregistrée dans .env")
+    print("✓ Key saved to .env")
     return key
 
 
 NO_API_KEY_MSG = (
-    "Clé API Gemini manquante (nécessaire pour l'extraction).\n"
-    "  → Obtiens-en une (gratuit) : https://aistudio.google.com/apikey\n"
-    "  → Puis lance :  python config.py   (ou ajoute GEMINI_API_KEY=... dans .env)"
+    "Gemini API key missing (required for extraction).\n"
+    "  → Get one for free: https://aistudio.google.com/apikey\n"
+    "  → Then run:  python config.py   (or add GEMINI_API_KEY=... to .env)"
 )
 
 
