@@ -44,7 +44,7 @@ Leave this window open. Check that it's running:
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked**
 4. Select the `chrome_extension/` folder
-5. Open ChatGPT, Claude or Gemini → the 🧠 panel appears bottom-right
+5. Open ChatGPT, Claude or Gemini → the MerOb panel appears bottom-right
 
 ## 3. Use it
 

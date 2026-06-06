@@ -1,5 +1,5 @@
 // ======================
-// Obsidian Chat Memory — content script
+// MerOb (Memory · Obsidian) — content script
 // Works on ChatGPT, Claude, Gemini
 // Calls the local FastAPI server (localhost:8000)
 // ======================
@@ -37,7 +37,20 @@ function createPanel() {
   el.id = "aios-panel";
   el.innerHTML = `
     <div id="aios-header">
-      <span>🧠 Obsidian Chat Memory</span>
+      <span class="aios-brand">
+        <svg width="18" height="18" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="10.5" fill="#7c6fff"/>
+          <circle cx="27" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+          <circle cx="93" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+          <circle cx="27" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+          <circle cx="93" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+          <line x1="60" y1="60" x2="27" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+          <line x1="60" y1="60" x2="93" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+          <line x1="60" y1="60" x2="27" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+          <line x1="60" y1="60" x2="93" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+        </svg>
+        MerOb
+      </span>
       <div id="aios-controls">
         <button id="aios-extract-btn" title="Extract memories from this conversation">⬆ Extract</button>
         <button id="aios-toggle" title="Minimize">−</button>
@@ -63,10 +76,11 @@ function createPanel() {
       right: 20px;
       width: 320px;
       max-height: 420px;
-      background: #1e1e2e;
-      color: #cdd6f4;
+      background: #0f0f17;
+      color: #f5f4f0;
+      border: 1px solid #20202e;
       border-radius: 12px;
-      font-family: sans-serif;
+      font-family: 'Syne', 'Segoe UI', sans-serif;
       font-size: 13px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
       z-index: 99999;
@@ -79,34 +93,38 @@ function createPanel() {
       justify-content: space-between;
       align-items: center;
       padding: 10px 14px;
-      background: #313244;
+      background: #1a1a26;
       border-radius: 12px 12px 0 0;
-      font-weight: bold;
+      font-weight: 800;
+      letter-spacing: -0.3px;
       cursor: move;
     }
+    .aios-brand { display: flex; align-items: center; gap: 7px; }
+    .aios-brand svg { flex: none; }
     #aios-controls { display: flex; gap: 6px; }
     #aios-controls button {
-      background: #45475a;
-      color: #cdd6f4;
+      background: #26263a;
+      color: #f5f4f0;
       border: none;
       border-radius: 6px;
       padding: 3px 8px;
       cursor: pointer;
       font-size: 12px;
     }
-    #aios-controls button:hover { background: #585b70; }
+    #aios-controls button:hover { background: #353550; }
     #aios-body { padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
     #aios-search {
       width: 100%;
       box-sizing: border-box;
       padding: 7px 10px;
       border-radius: 8px;
-      border: 1px solid #45475a;
-      background: #313244;
-      color: #cdd6f4;
+      border: 1px solid #2a2a3a;
+      background: #1a1a26;
+      color: #f5f4f0;
       font-size: 13px;
       outline: none;
     }
+    #aios-search:focus { border-color: #7c6fff; }
     #aios-results {
       overflow-y: auto;
       max-height: 260px;
@@ -114,37 +132,37 @@ function createPanel() {
       flex-direction: column;
       gap: 6px;
     }
-    .aios-hint { color: #6c7086; font-size: 12px; margin: 0; }
+    .aios-hint { color: #6b6880; font-size: 12px; margin: 0; }
     .aios-card {
-      background: #313244;
+      background: #1a1a26;
       border-radius: 8px;
       padding: 8px 10px;
-      border-left: 3px solid #89b4fa;
+      border-left: 3px solid #7c6fff;
       cursor: pointer;
       transition: background 0.15s;
     }
-    .aios-card:hover { background: #45475a; }
+    .aios-card:hover { background: #26263a; }
     .aios-card .aios-source {
       font-size: 10px;
-      color: #6c7086;
+      color: #6b6880;
       margin-bottom: 3px;
     }
-    .aios-card.selected { border-left-color: #a6e3a1; }
+    .aios-card.selected { border-left-color: #b8b0ff; background: #26263a; }
     #aios-inject-btn {
       width: 100%;
       padding: 7px;
-      background: #89b4fa;
-      color: #1e1e2e;
+      background: #7c6fff;
+      color: #0f0f17;
       border: none;
       border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
       font-size: 13px;
     }
-    #aios-inject-btn:hover { background: #b4befe; }
+    #aios-inject-btn:hover { background: #b8b0ff; }
     #aios-panel.minimized #aios-body { display: none; }
     #aios-panel.minimized { max-height: 44px; }
-    #aios-close:hover { background: #f38ba8 !important; color: #1e1e2e; }
+    #aios-close:hover { background: #ff8fa3 !important; color: #0f0f17; }
     #aios-launcher {
       position: fixed;
       bottom: 20px;
@@ -152,8 +170,8 @@ function createPanel() {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: #313244;
-      font-size: 22px;
+      background: #1a1a26;
+      border: 1px solid #20202e;
       display: none;
       align-items: center;
       justify-content: center;
@@ -162,7 +180,7 @@ function createPanel() {
       z-index: 99999;
       user-select: none;
     }
-    #aios-launcher:hover { background: #45475a; }
+    #aios-launcher:hover { background: #26263a; }
   `;
 
   document.head.appendChild(style);
@@ -171,8 +189,20 @@ function createPanel() {
   // Floating launcher to reopen the panel after it has been closed
   const launcher = document.createElement("div");
   launcher.id = "aios-launcher";
-  launcher.title = "Open Obsidian Chat Memory";
-  launcher.textContent = "🧠";
+  launcher.title = "Open MerOb";
+  launcher.innerHTML = `
+    <svg width="26" height="26" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="10.5" fill="#7c6fff"/>
+      <circle cx="27" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+      <circle cx="93" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+      <circle cx="27" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+      <circle cx="93" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+      <line x1="60" y1="60" x2="27" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+      <line x1="60" y1="60" x2="93" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+      <line x1="60" y1="60" x2="27" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+      <line x1="60" y1="60" x2="93" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+    </svg>
+  `;
   document.body.appendChild(launcher);
 
   return el;

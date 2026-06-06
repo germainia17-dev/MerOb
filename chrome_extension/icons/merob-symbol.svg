@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <circle cx="60" cy="60" r="10.5" fill="#7c6fff"/>
+  <circle cx="27" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+  <circle cx="93" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+  <circle cx="27" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+  <circle cx="93" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+  <circle cx="60" cy="18" r="4.5" fill="#7c6fff" opacity="0.4"/>
+  <circle cx="60" cy="102" r="4.5" fill="#7c6fff" opacity="0.4"/>
+  <line x1="60" y1="60" x2="27" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+  <line x1="60" y1="60" x2="93" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+  <line x1="60" y1="60" x2="27" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="60" y1="60" x2="93" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="60" y1="60" x2="60" y2="18" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
+  <line x1="60" y1="60" x2="60" y2="102" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
+  <line x1="27" y1="36" x2="60" y2="18" stroke="#7c6fff" stroke-width="0.6" opacity="0.2"/>
+  <line x1="93" y1="36" x2="60" y2="18" stroke="#7c6fff" stroke-width="0.6" opacity="0.2"/>
+  <line x1="27" y1="84" x2="60" y2="102" stroke="#7c6fff" stroke-width="0.6" opacity="0.2"/>
+  <line x1="93" y1="84" x2="60" y2="102" stroke="#7c6fff" stroke-width="0.6" opacity="0.2"/>
+</svg>

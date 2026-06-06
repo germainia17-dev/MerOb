@@ -1,6 +1,6 @@
 <div align="center">
 
-# Obsidian Chat Memory
+# MerOb — Memory · Obsidian
 
 **Turn your ChatGPT, Claude & Gemini conversations into a self-organizing Obsidian knowledge graph — automatically, locally, for free.**
 
@@ -14,7 +14,7 @@
 ---
 
 Your best thinking happens inside AI chats — and then dies in a history you'll never reopen.
-**Obsidian Chat Memory** captures the insights from your conversations and files them into your
+**MerOb** captures the insights from your conversations and files them into your
 own Obsidian vault as individual, linked notes. Over time, a knowledge graph grows itself.
 
 - 🧠 **Works across ChatGPT, Claude and Gemini** — one brain for all three, captured from the web UI.
@@ -89,7 +89,7 @@ knowing you.
 The "AI memory" space is crowded, but almost everything is either a **cloud SaaS** that owns your
 data, or a **coding-agent** memory tool. This is different on purpose:
 
-|                         | Native chat memory | Cloud memory SaaS | **Obsidian Chat Memory** |
+|                         | Native chat memory | Cloud memory SaaS | **MerOb** |
 | ----------------------- | :----------------: | :---------------: | :----------------------: |
 | Works across ChatGPT + Claude + Gemini | ❌ | ⚠️ | ✅ |
 | Your data in plain Markdown you own     | ❌ | ❌ | ✅ |

@@ -5,45 +5,82 @@
   <style>
     body {
       width: 280px;
-      font-family: sans-serif;
+      font-family: 'Syne', 'Segoe UI', sans-serif;
       font-size: 13px;
-      background: #1e1e2e;
-      color: #cdd6f4;
+      background: #0f0f17;
+      color: #f5f4f0;
       margin: 0;
-      padding: 12px;
+      padding: 14px;
     }
-    h2 { margin: 0 0 10px; font-size: 15px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+    .brand svg { flex: none; }
+    .brand-text { display: flex; flex-direction: column; line-height: 1; }
+    .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .brand-tag {
+      font-family: 'DM Mono', 'Courier New', monospace;
+      font-size: 9px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      color: #7c6fff;
+      margin-top: 3px;
+    }
     .stat-row {
       display: flex;
       justify-content: space-between;
-      background: #313244;
+      background: #1a1a26;
       border-radius: 8px;
       padding: 8px 12px;
       margin-bottom: 6px;
     }
-    .stat-label { color: #6c7086; }
-    .stat-value { font-weight: bold; color: #89b4fa; }
-    .pending { color: #f38ba8 !important; }
+    .stat-label { color: #6b6880; }
+    .stat-value { font-weight: bold; color: #7c6fff; }
+    .pending { color: #ff8fa3 !important; }
     #status {
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 11px;
-      color: #6c7086;
+      color: #6b6880;
       text-align: center;
     }
     #status.ok  { color: #a6e3a1; }
-    #status.err { color: #f38ba8; }
+    #status.err { color: #ff8fa3; }
     .by-file { margin-top: 8px; }
     .by-file-row {
       display: flex;
       justify-content: space-between;
       padding: 3px 0;
-      border-bottom: 1px solid #313244;
+      border-bottom: 1px solid #1a1a26;
       font-size: 12px;
+      color: #b8b0ff;
     }
   </style>
 </head>
 <body>
-  <h2>🧠 Obsidian Chat Memory</h2>
+  <div class="brand">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="34" height="34">
+      <circle cx="60" cy="60" r="10.5" fill="#7c6fff"/>
+      <circle cx="27" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+      <circle cx="93" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
+      <circle cx="27" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+      <circle cx="93" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
+      <circle cx="60" cy="18" r="4.5" fill="#7c6fff" opacity="0.4"/>
+      <circle cx="60" cy="102" r="4.5" fill="#7c6fff" opacity="0.4"/>
+      <line x1="60" y1="60" x2="27" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+      <line x1="60" y1="60" x2="93" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
+      <line x1="60" y1="60" x2="27" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+      <line x1="60" y1="60" x2="93" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
+      <line x1="60" y1="60" x2="60" y2="18" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
+      <line x1="60" y1="60" x2="60" y2="102" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
+    </svg>
+    <div class="brand-text">
+      <span class="brand-name">MerOb</span>
+      <span class="brand-tag">MEMORY · OBSIDIAN</span>
+    </div>
+  </div>
   <div id="status">Connecting to server…</div>
   <div id="stats"></div>
   <script src="popup.js"></script>

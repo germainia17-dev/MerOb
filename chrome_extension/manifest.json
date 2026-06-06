@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Obsidian Chat Memory",
+  "name": "MerOb",
   "version": "1.0",
-  "description": "Capture AI chat insights into your Obsidian vault — automatically, locally, for free.",
+  "description": "MerOb — Memory · Obsidian. Capture AI chat insights into your Obsidian vault, automatically, locally, for free.",
 
   "icons": {
     "16": "icons/icon16.png",
@@ -34,7 +34,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Obsidian Chat Memory",
+    "default_title": "MerOb",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
