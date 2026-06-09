@@ -4,7 +4,12 @@
 
 **Turn your ChatGPT, Claude & Gemini conversations into a self-organizing knowledge graph.**
 
-[Install](#-install) · [How it works](#-how-it-works) · [Features](#-features) · [Roadmap](#-roadmap)
+[![GitHub](https://img.shields.io/badge/GitHub-germainia17--dev%2FMerOb-blue?logo=github)](https://github.com/germainia17-dev/MerOb)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen)](https://github.com/germainia17-dev/MerOb)
+[![Contributions](https://img.shields.io/badge/Contributions-Welcome-orange)](CONTRIBUTING.md)
+
+[Install](#-install) · [How it works](#-how-it-works) · [Features](#-features) · [Roadmap](#-roadmap) · [Contribute](CONTRIBUTING.md)
 
 </div>
 
