@@ -12,6 +12,10 @@
 
 ![MerOb Hero](./docs/hero.png)
 
+### 🎬 See it in action
+
+https://github.com/username/merob/blob/main/docs/demo.mov
+
 Your best thinking happens inside AI chats — and then dies in a history you'll never reopen.
 
 **MerOb** captures the insights from your conversations and files them into your own **Obsidian vault** as individual, linked notes. Over time, a knowledge graph grows itself.
