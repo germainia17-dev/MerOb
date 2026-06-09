@@ -26,8 +26,8 @@ python3 --version  # Should be 3.10 or higher
 
 ```bash
 # Clone the repo
-git clone https://github.com/<your-username>/merob.git
-cd merob
+git clone https://github.com/germainia17-dev/MerOb.git
+cd MerOb
 
 # macOS / Linux
 ./start.sh

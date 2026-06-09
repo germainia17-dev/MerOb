@@ -14,7 +14,7 @@
 
 ### 🎬 See it in action
 
-https://github.com/username/merob/blob/main/docs/demo.mov
+https://github.com/germainia17-dev/MerOb/blob/main/docs/demo.mov
 
 Your best thinking happens inside AI chats — and then dies in a history you'll never reopen.
 
