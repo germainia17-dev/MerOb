@@ -2,87 +2,169 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      width: 280px;
-      font-family: 'Syne', 'Segoe UI', sans-serif;
-      font-size: 13px;
-      background: #0f0f17;
-      color: #f5f4f0;
-      margin: 0;
-      padding: 14px;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #111314;
+      --bg-panel: #18191B;
+      --bg-hover: #222427;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-light: rgba(255, 255, 255, 0.12);
+      --text: #F2F2F2;
+      --text-sec: #8A8F98;
+      --accent: #5E6AD2;
+      --accent-glow: rgba(94, 106, 210, 0.2);
+      --success: #3FB950;
+      --danger: #F85149;
     }
-    .brand {
+    body {
+      width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 0 0 14px;
+      background: rgba(17, 19, 20, 0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
-    .brand svg { flex: none; }
-    .brand-text { display: flex; flex-direction: column; line-height: 1; }
-    .brand-name { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
-    .brand-tag {
-      font-family: 'DM Mono', 'Courier New', monospace;
-      font-size: 9px;
-      font-weight: 300;
-      letter-spacing: 2px;
-      color: #7c6fff;
-      margin-top: 3px;
+    .logo {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #6b78e3 0%, var(--accent) 100%);
+      box-shadow: 0 2px 8px var(--accent-glow), inset 0 1px 1px rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
     }
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      background: #1a1a26;
+    .logo svg { width: 14px; height: 14px; fill: #fff; }
+    .brand-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 15px; letter-spacing: -0.2px;
+      background: linear-gradient(180deg, #fff, #a1a1aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .status-badge {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 500;
+      color: var(--text-sec);
+      background: var(--bg-panel);
+      padding: 4px 8px; border-radius: 99px;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+    .dot.connected { background: var(--success); box-shadow: 0 0 8px rgba(63,185,80,0.6); }
+    .dot.disconnected { background: var(--danger); box-shadow: 0 0 8px rgba(248,81,73,0.6); }
+    .dot.connecting { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); animation: pulse 1s infinite; }
+    
+    @keyframes pulse { 0%, 100% {opacity:1} 50% {opacity:.4} }
+    
+    .content { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    
+    .stats-row { display: flex; gap: 12px; }
+    .stat-card {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 8px 12px;
-      margin-bottom: 6px;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.02);
+      transition: border-color 0.2s, transform 0.2s;
     }
-    .stat-label { color: #6b6880; }
-    .stat-value { font-weight: bold; color: #7c6fff; }
-    .pending { color: #ff8fa3 !important; }
-    #status {
-      margin-top: 12px;
-      font-size: 11px;
-      color: #6b6880;
-      text-align: center;
+    .stat-card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-1px);
     }
-    #status.ok  { color: #a6e3a1; }
-    #status.err { color: #ff8fa3; }
-    .by-file { margin-top: 8px; }
-    .by-file-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      border-bottom: 1px solid #1a1a26;
-      font-size: 12px;
-      color: #b8b0ff;
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
     }
+    .stat-label { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-val { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+    
+    .btn {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px;
+      border-radius: 6px;
+      font-family: inherit; font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-light);
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn.primary {
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    }
+    .btn.primary:hover { background: #fff; box-shadow: 0 4px 8px rgba(255,255,255,0.15); }
+    
+    .section-title { font-size: 10px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: -8px; }
+    .categories { display: flex; flex-direction: column; gap: 2px; }
+    .cat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .cat-row:hover { background: var(--bg-panel); }
+    .cat-name { color: var(--text-sec); display: flex; align-items: center; gap: 8px; font-size: 12px;}
+    .cat-dot { width: 6px; height: 6px; border-radius: 50%; opacity: 0.8; }
+    .cat-count { font-size: 11px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: var(--text); font-weight: 500; }
+    
+    .empty-state { text-align: center; padding: 32px 0; color: var(--text-sec); font-size: 12px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+    .empty-icon { font-size: 24px; opacity: 0.5; margin-bottom: 4px; }
+    
+    /* Animations */
+    @keyframes slideUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .content > * { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .content > *:nth-child(1) { animation-delay: 0.05s; }
+    .content > *:nth-child(2) { animation-delay: 0.1s; }
+    .content > *:nth-child(3) { animation-delay: 0.15s; }
   </style>
 </head>
 <body>
-  <div class="brand">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="34" height="34">
-      <circle cx="60" cy="60" r="10.5" fill="#7c6fff"/>
-      <circle cx="27" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
-      <circle cx="93" cy="36" r="6" fill="#7c6fff" opacity="0.7"/>
-      <circle cx="27" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
-      <circle cx="93" cy="84" r="6" fill="#7c6fff" opacity="0.5"/>
-      <circle cx="60" cy="18" r="4.5" fill="#7c6fff" opacity="0.4"/>
-      <circle cx="60" cy="102" r="4.5" fill="#7c6fff" opacity="0.4"/>
-      <line x1="60" y1="60" x2="27" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
-      <line x1="60" y1="60" x2="93" y2="36" stroke="#7c6fff" stroke-width="1.5" opacity="0.55"/>
-      <line x1="60" y1="60" x2="27" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
-      <line x1="60" y1="60" x2="93" y2="84" stroke="#7c6fff" stroke-width="1.5" opacity="0.4"/>
-      <line x1="60" y1="60" x2="60" y2="18" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
-      <line x1="60" y1="60" x2="60" y2="102" stroke="#7c6fff" stroke-width="1.2" opacity="0.3"/>
-    </svg>
-    <div class="brand-text">
-      <span class="brand-name">MerOb</span>
-      <span class="brand-tag">MEMORY · OBSIDIAN</span>
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 16 16"><path d="M8 2L2 8l6 6 6-6-6-6zm0 2.8L11.2 8 8 11.2 4.8 8 8 4.8z"/></svg>
+    </div>
+    <div class="brand-title">MerOb</div>
+    <div class="status-badge" id="status-badge">
+      <div class="dot connecting" id="status-dot"></div>
+      <span id="status-text">Connecting</span>
     </div>
   </div>
-  <div id="status">Connecting to server…</div>
-  <div id="stats"></div>
+  <div class="content" id="content"></div>
   <script src="popup.js"></script>
 </body>
 </html>

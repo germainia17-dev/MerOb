@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MerOb — Your AI Conversations Deserve a Second Life</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000209;
+      --text: #eeeeee;
+      --text-muted: #6b6b78;
+      --primary: #7c6fff;
+      --primary-glow: rgba(124, 111, 255, 0.25);
+      --line: rgba(255, 255, 255, 0.08);
+      --line-soft: rgba(255, 255, 255, 0.04);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-display: 'Space Grotesk', 'Inter', sans-serif;
+      --font-mono: 'Space Mono', 'SF Mono', monospace;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 1.75rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      mix-blend-mode: difference;
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .logo svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: var(--text);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    .sound-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      color: var(--text);
+      user-select: none;
+    }
+    .sound-toggle .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+      transition: all 0.3s;
+    }
+    .sound-toggle.off .dot {
+      background: var(--text-muted);
+      box-shadow: none;
+    }
+    .nav-star {
+      color: var(--text);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .nav-star:hover { opacity: 0.6; }
+
+    #scrolly-sections {
+      position: relative;
+      z-index: 10;
+    }
+
+    .section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 10vw;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .section.center {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .section.right {
+      justify-content: flex-end;
+    }
+
+    .section-content {
+      max-width: 620px;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    /* Technical //0X — marker (replaces pill badge) */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1.75rem;
+    }
+    .badge::before {
+      content: "";
+      width: 28px;
+      height: 1px;
+      background: var(--primary);
+      display: inline-block;
+    }
+    .section.center .badge,
+    .section--auto.center .badge { justify-content: center; }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 7.5vw, 5.5rem);
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.02;
+      text-transform: uppercase;
+      margin: 0 0 1.75rem 0;
+      color: var(--text);
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 4.5vw, 3.6rem);
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      line-height: 1.06;
+      text-transform: uppercase;
+      margin: 0 0 1.5rem 0;
+      color: var(--text);
+    }
+
+    p {
+      font-size: clamp(1rem, 1.5vw, 1.2rem);
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin: 0;
+      font-weight: 300;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: var(--text);
+      color: var(--bg);
+      padding: 0.9rem 2rem;
+      border-radius: 0;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      margin-top: 2.5rem;
+    }
+
+    .btn:hover {
+      background: var(--primary);
+      color: var(--text);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn-secondary:hover {
+      background: transparent;
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 3rem;
+      margin-top: 3.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 2rem;
+    }
+    .stat-val {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    /* Gradient glow effects */
+    .glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      filter: blur(80px);
+      opacity: 0.5;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Wireframe geometric background (Hashgraph-style) */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .grid-bg svg {
+      position: absolute;
+      stroke: rgba(255,255,255,0.05);
+      fill: none;
+      stroke-width: 1;
+    }
+    .wire-1 { top: -8vh; right: -6vw; width: 60vw; height: auto; }
+    .wire-2 { bottom: -14vh; left: -10vw; width: 52vw; height: auto; }
+    .grid-bg .fine-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 5.5rem 5.5rem;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+    }
+
+    /* ─── Intro loader ─── */
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+    #loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .loader-logo {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .loader-bar {
+      width: 180px;
+      height: 1px;
+      background: var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .loader-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--primary);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: loaderFill 1.8s ease forwards;
+    }
+    @keyframes loaderFill { to { transform: scaleX(1); } }
+    .loader-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      .section {
+        padding: 0 5vw;
+        justify-content: center !important;
+        text-align: center;
+      }
+      .hero-buttons {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .stats {
+        justify-content: center;
+      }
+      .navbar {
+        padding: 1rem;
+      }
+    }
+
+    /* ═══════════════════════════════════════════
+       NEW SECTIONS — outside #scrolly-sections
+    ═══════════════════════════════════════════ */
+
+    .section--auto {
+      min-height: auto;
+      padding-top: 7rem;
+      padding-bottom: 7rem;
+    }
+    .section-wide { max-width: 1100px; width: 100%; }
+    .section-narrow { max-width: 680px; width: 100%; }
+
+    /* ─── Editorial flat card ─── */
+    .glass-card {
+      background: rgba(255,255,255,0.015);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 2rem;
+    }
+
+    /* ─── How It Works ─── */
+    .how-steps {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 3.5rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+    }
+    .how-step {
+      flex: 1;
+      text-align: left;
+      padding: 2.25rem;
+      border: none;
+      border-radius: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      transition: background 0.25s;
+    }
+    .how-step:last-child { border-right: none; }
+    .how-step:hover { background: rgba(255,255,255,0.02); }
+    .how-step__icon {
+      width: 44px;
+      height: 44px;
+      margin: 0 0 1.5rem;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .how-step__number {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--primary);
+      font-weight: 400;
+      margin-bottom: 0.65rem;
+    }
+    .how-step__title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin: 0 0 0.75rem;
+    }
+    .how-step__desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin: 0;
+      font-weight: 300;
+    }
+    .how-arrow { display: none; }
+
+    /* ─── Platforms ─── */
+    .platforms-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 3.5rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+    }
+    .platform-badge {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      border: none;
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      transition: background 0.25s;
+    }
+    .platform-badge:last-child { border-right: none; }
+    .platform-badge:hover { background: rgba(255,255,255,0.02); }
+    .platform-badge__logo {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+    .platform-badge__name {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .platform-badge__sub {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* ─── Features ─── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      margin-top: 3.5rem;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+    }
+    .feature-item {
+      display: block;
+      padding: 2rem;
+      border: none;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      transition: background 0.25s;
+    }
+    .feature-item:nth-child(3n) { border-right: none; }
+    .feature-item:nth-last-child(-n+3) { border-bottom: none; }
+    .feature-item:hover { background: rgba(255,255,255,0.02); }
+    .feature-item__icon {
+      width: 38px;
+      height: 38px;
+      margin-bottom: 1.25rem;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feature-item__title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin: 0 0 0.5rem;
+    }
+    .feature-item__desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin: 0;
+      font-weight: 300;
+    }
+
+    /* ─── Demo ─── */
+    .demo-frame {
+      margin-top: 3.5rem;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 1.5rem;
+    }
+    .demo-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      width: fit-content;
+    }
+    .demo-tab {
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--line);
+      color: var(--text-muted);
+      padding: 0.6rem 1.25rem;
+      border-radius: 0;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .demo-tab:last-child { border-right: none; }
+    .demo-tab:hover { color: var(--text); }
+    .demo-tab.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    .demo-viewport {
+      border-radius: 2px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.4);
+      min-height: 320px;
+      border: 1px solid var(--line-soft);
+    }
+    .demo-panel { width: 100%; }
+    .demo-panel svg { width: 100%; height: auto; display: block; }
+
+    /* ─── Install ─── */
+    .install-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-top: 3rem;
+      text-align: left;
+    }
+    .install-step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+    .install-step__num {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--bg);
+      flex-shrink: 0;
+      margin-top: 0.25rem;
+    }
+    .install-step__label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .code-block {
+      background: rgba(255,255,255,0.015);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      padding: 0.9rem 1.125rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .code-block .cmd { color: var(--text); }
+    .code-block .comment { color: var(--text-muted); }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text-muted);
+      padding: 0.3rem 0.7rem;
+      border-radius: 2px;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+    /* ─── Footer ─── */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 5rem 10vw 3rem;
+      position: relative;
+      z-index: 10;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 4rem;
+      margin-bottom: 4rem;
+    }
+    .footer-brand p {
+      font-size: 0.85rem;
+      max-width: 260px;
+      margin: 1.25rem 0 1.75rem;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+    .footer-social {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .footer-icon-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 2px;
+      border: 1px solid var(--line);
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .footer-icon-link:hover { color: var(--text); border-color: var(--text); }
+    .footer-col__heading {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-bottom: 1.5rem;
+    }
+    .footer-col__links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .footer-col__links a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 300;
+      transition: color 0.2s;
+    }
+    .footer-col__links a:hover { color: var(--primary); }
+    .footer-bottom {
+      border-top: 1px solid var(--line);
+      padding-top: 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .footer-bottom a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+    .footer-bottom a:hover { color: var(--text); }
+
+    /* ─── Mobile overrides for new sections ─── */
+    @media (max-width: 768px) {
+      .section--auto { padding: 5rem 5vw; }
+      .how-steps { flex-direction: column; }
+      .how-step { border-right: none; border-bottom: 1px solid var(--line); }
+      .how-step:last-child { border-bottom: none; }
+      .platforms-grid { grid-template-columns: repeat(2, 1fr); }
+      .platform-badge:nth-child(2n) { border-right: none; }
+      .platform-badge:nth-child(1), .platform-badge:nth-child(2) { border-bottom: 1px solid var(--line); }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-item { border-right: none; border-bottom: 1px solid var(--line); }
+      .feature-item:last-child { border-bottom: none; }
+      .footer-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+      .footer-bottom { flex-direction: column; gap: 0.75rem; text-align: center; }
+      .demo-tabs { width: 100%; }
+      .wire-1, .wire-2 { width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Intro loader -->
+  <div id="loader">
+    <div class="loader-logo">MerOb<br><span style="font-size:0.5em; letter-spacing:0.3em; color:var(--text-muted);">MEMORY · OBSIDIAN</span></div>
+    <div class="loader-bar"></div>
+    <div class="loader-label">Loading</div>
+  </div>
+
+  <!-- Wireframe geometric background -->
+  <div class="grid-bg">
+    <div class="fine-grid"></div>
+    <svg class="wire-1" viewBox="0 0 600 520" preserveAspectRatio="xMidYMid meet">
+      <polygon points="300,20 560,170 560,470 300,500 40,350 40,170"/>
+      <polygon points="300,90 490,200 490,420 300,460 110,330 110,200"/>
+    </svg>
+    <svg class="wire-2" viewBox="0 0 520 520" preserveAspectRatio="xMidYMid meet">
+      <polygon points="260,10 510,150 510,440 260,510 10,370 10,150"/>
+      <line x1="260" y1="10" x2="260" y2="510"/>
+      <line x1="10" y1="150" x2="510" y2="440"/>
+      <line x1="510" y1="150" x2="10" y2="440"/>
+    </svg>
+  </div>
+  <div id="canvas-container"></div>
+
+  <nav class="navbar">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      MerOb
+    </div>
+    <div class="nav-right">
+      <span class="sound-toggle off" id="soundToggle"><span class="dot"></span><span id="soundLabel">Sound Off</span></span>
+      <a href="https://github.com/nicobailon/merob" target="_blank" class="nav-star">★ Star</a>
+    </div>
+  </nav>
+
+  <div id="scrolly-sections">
+    <!-- 1. HERO -->
+    <div class="section" id="sec-hero">
+      <div class="section-content">
+        <div class="badge">//00 — 100% Local & Free</div>
+        <h1>Your AI<br>deserves a<br>second life.</h1>
+        <p>Turn ChatGPT, Claude & Gemini conversations into a self-organizing Obsidian knowledge graph.</p>
+        <div class="hero-buttons">
+          <a href="https://github.com/nicobailon/merob" class="btn">Get Started</a>
+          <a href="#sec-unified" class="btn btn-secondary">Explore ↓</a>
+        </div>
+        <div class="stats">
+          <div>
+            <div class="stat-val">3</div>
+            <div class="stat-label">AI Platforms</div>
+          </div>
+          <div>
+            <div class="stat-val">Graph</div>
+            <div class="stat-label">Architecture</div>
+          </div>
+          <div>
+            <div class="stat-val">Vault</div>
+            <div class="stat-label">Markdown</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. UNIFIED -->
+    <div class="section right" id="sec-unified">
+      <div class="section-content">
+        <div class="badge">//01 — Unified Memory</div>
+        <h2>One brain<br>for all your AIs.</h2>
+        <p>ChatGPT, Claude, Gemini — every conversation flows into one seamless knowledge graph. No more siloed thinking or lost insights across different chat windows.</p>
+      </div>
+    </div>
+
+    <!-- 3. LOCAL -->
+    <div class="section" id="sec-local">
+      <div class="section-content">
+        <div class="badge">//02 — Your Vault, Your Data</div>
+        <h2>100% Local.<br>Zero Lock-in.</h2>
+        <p>Plain Markdown notes land directly in your Obsidian vault. Everything runs on your machine. Zero cloud dependencies, zero subscriptions, zero data leaks. Privacy by architecture.</p>
+      </div>
+    </div>
+
+    <!-- 4. GRAPH -->
+    <div class="section right" id="sec-graph">
+      <div class="section-content">
+        <div class="badge">//03 — Self-Organizing</div>
+        <h2>A Graph,<br>Not a List.</h2>
+        <p>MerOb automatically extracts topics, finds connections between conversations, and builds a map of everything you've ever explored. Your knowledge forms a living, interconnected web.</p>
+      </div>
+    </div>
+
+    <!-- 5. RECALL -->
+    <div class="section" id="sec-recall">
+      <div class="section-content">
+        <div class="badge">//04 — Live Recall</div>
+        <h2>Remembers you<br>back.</h2>
+        <p>Past memories surface as you type in AI chats. Inject relevant context with one click. Your AI finally has long-term, cross-platform recall.</p>
+      </div>
+    </div>
+
+    <!-- 6. CTA -->
+    <div class="section center" id="sec-cta">
+      <div class="section-content">
+        <div class="glow" style="top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+        <div class="badge">//05 — Get Started</div>
+        <h2>Ready to remember?</h2>
+        <p>Open source, free forever, and yours to keep. Get started in under a minute.</p>
+        <a href="https://github.com/nicobailon/merob" class="btn">View on GitHub</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       SECTIONS 7–11 + FOOTER — outside #scrolly-sections
+  ════════════════════════════════════════════════════ -->
+
+  <!-- 7. HOW IT WORKS -->
+  <section class="section section--auto center" id="sec-how">
+    <div class="section-content section-wide">
+      <div class="badge">//06 — How It Works</div>
+      <h2>Three steps.<br>One living memory.</h2>
+
+      <div class="how-steps">
+
+        <div class="glass-card how-step">
+          <div class="how-step__icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+              <circle cx="9" cy="9" r="2"/><path d="M15 9h2M15 12h2M9 12h2"/>
+            </svg>
+          </div>
+          <div class="how-step__number">Step 01</div>
+          <div class="how-step__title">Extract</div>
+          <p class="how-step__desc">Click the MerOb button in any ChatGPT, Claude, or Gemini chat. The extension captures the full conversation.</p>
+        </div>
+
+        <div class="how-arrow" aria-hidden="true">
+          <svg width="36" height="16" viewBox="0 0 36 16" fill="none">
+            <path d="M0 8h32M26 2l6 6-6 6" stroke="#7c6fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="glass-card how-step">
+          <div class="how-step__icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+            </svg>
+          </div>
+          <div class="how-step__number">Step 02</div>
+          <div class="how-step__title">Process Locally</div>
+          <p class="how-step__desc">Topics, entities, and wikilinks are extracted on your machine. Plain Markdown notes land directly in your Obsidian vault.</p>
+        </div>
+
+        <div class="how-arrow" aria-hidden="true">
+          <svg width="36" height="16" viewBox="0 0 36 16" fill="none">
+            <path d="M0 8h32M26 2l6 6-6 6" stroke="#7c6fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="glass-card how-step">
+          <div class="how-step__icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div class="how-step__number">Step 03</div>
+          <div class="how-step__title">Recall</div>
+          <p class="how-step__desc">A floating panel surfaces relevant memories as you type in any AI chat. Inject past context with one click.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. PLATFORMS -->
+  <section class="section section--auto center" id="sec-platforms">
+    <div class="section-content section-narrow">
+      <div class="badge">//07 — Works With</div>
+      <h2>Your AI,<br>your choice.</h2>
+      <p>MerOb works natively with every major AI chat platform and stores everything in Obsidian.</p>
+
+      <div class="platforms-grid">
+
+        <div class="glass-card platform-badge">
+          <div class="platform-badge__logo">
+            <svg viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="16" stroke="#7c6fff" stroke-width="1.5" fill="rgba(124,111,255,0.08)"/>
+              <path d="M18 10a8 8 0 100 16 8 8 0 000-16z" fill="none" stroke="#7c6fff" stroke-width="1.5"/>
+              <circle cx="18" cy="18" r="3" fill="#7c6fff"/>
+              <path d="M18 10v5M18 21v5M10 18h5M21 18h5" stroke="#7c6fff" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="platform-badge__name">ChatGPT</div>
+            <div class="platform-badge__sub">OpenAI</div>
+          </div>
+        </div>
+
+        <div class="glass-card platform-badge">
+          <div class="platform-badge__logo">
+            <svg viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="16" stroke="#7c6fff" stroke-width="1.5" fill="rgba(124,111,255,0.08)"/>
+              <path d="M24 13a9 9 0 00-12 0M12 23a9 9 0 0012 0" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round"/>
+              <circle cx="18" cy="18" r="2.5" fill="#7c6fff"/>
+            </svg>
+          </div>
+          <div>
+            <div class="platform-badge__name">Claude</div>
+            <div class="platform-badge__sub">Anthropic</div>
+          </div>
+        </div>
+
+        <div class="glass-card platform-badge">
+          <div class="platform-badge__logo">
+            <svg viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="16" stroke="#7c6fff" stroke-width="1.5" fill="rgba(124,111,255,0.08)"/>
+              <path d="M18 10l2.5 5.5h6l-4.8 3.5 1.8 6-5.5-4-5.5 4 1.8-6L9.5 15.5h6L18 10z" fill="rgba(124,111,255,0.3)" stroke="#7c6fff" stroke-width="1.25" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="platform-badge__name">Gemini</div>
+            <div class="platform-badge__sub">Google</div>
+          </div>
+        </div>
+
+        <div class="glass-card platform-badge">
+          <div class="platform-badge__logo">
+            <svg viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="16" stroke="#7c6fff" stroke-width="1.5" fill="rgba(124,111,255,0.08)"/>
+              <path d="M18 9l5 5-5 5-5-5 5-5z" fill="rgba(124,111,255,0.5)" stroke="#7c6fff" stroke-width="1.25" stroke-linejoin="round"/>
+              <path d="M18 19l5 5-5 5-5-5 5-5z" fill="rgba(124,111,255,0.25)" stroke="#7c6fff" stroke-width="1.25" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="platform-badge__name">Obsidian</div>
+            <div class="platform-badge__sub">Knowledge Vault</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. FEATURES DEEP-DIVE -->
+  <section class="section section--auto center" id="sec-features">
+    <div class="section-content section-wide">
+      <div class="badge">//08 — Capabilities</div>
+      <h2>Everything you need.<br>Nothing you don't.</h2>
+
+      <div class="features-grid">
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">One-click Capture</div>
+            <p class="feature-item__desc">Extract full conversation threads from ChatGPT, Claude, and Gemini with a single browser action.</p>
+          </div>
+        </div>
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/>
+              <path d="M5 6h5M14 6h5M5 18h5M14 18h5M12 9v2M12 13v2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">Auto Knowledge Graph</div>
+            <p class="feature-item__desc">Topics and entities are linked automatically, forming a browsable network of everything you've explored.</p>
+          </div>
+        </div>
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">Plain Markdown Output</div>
+            <p class="feature-item__desc">Every note is a standard .md file — readable anywhere, portable forever, never locked in a proprietary format.</p>
+          </div>
+        </div>
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">100% Offline Processing</div>
+            <p class="feature-item__desc">Zero network calls for extraction or linking. Your data never leaves your machine. Privacy by architecture.</p>
+          </div>
+        </div>
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">Floating Recall Panel</div>
+            <p class="feature-item__desc">A non-intrusive overlay surfaces relevant memories while you type — inject them with one click.</p>
+          </div>
+        </div>
+
+        <div class="glass-card feature-item">
+          <div class="feature-item__icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c6fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+              <path d="M7 8h10M7 11h7"/>
+            </svg>
+          </div>
+          <div>
+            <div class="feature-item__title">Cross-Platform Memory</div>
+            <p class="feature-item__desc">Insights from a Claude session appear when you open ChatGPT. One unified memory layer across all your AIs.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. DEMO -->
+  <section class="section section--auto center" id="sec-demo">
+    <div class="section-content section-wide">
+      <div class="badge">//09 — See It In Action</div>
+      <h2>What it looks like.</h2>
+      <p>From the floating recall panel to your Obsidian vault — a seamless memory loop.</p>
+
+      <div class="demo-frame">
+        <div class="demo-tabs">
+          <button class="demo-tab active" data-panel="panel-recall">Recall Panel</button>
+          <button class="demo-tab" data-panel="panel-graph">Knowledge Graph</button>
+          <button class="demo-tab" data-panel="panel-vault">Obsidian Vault</button>
+        </div>
+        <div class="demo-viewport">
+
+          <!-- Panel 1: Floating Recall UI -->
+          <div class="demo-panel" id="panel-recall">
+            <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background -->
+              <rect width="900" height="380" fill="#0a0a0f"/>
+              <!-- Chat background (blurred) -->
+              <rect x="0" y="0" width="900" height="380" fill="url(#chatbg)"/>
+              <defs>
+                <linearGradient id="chatbg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#0d0d15"/>
+                  <stop offset="100%" stop-color="#060608"/>
+                </linearGradient>
+                <linearGradient id="panelGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#16161e"/>
+                  <stop offset="100%" stop-color="#111118"/>
+                </linearGradient>
+                <linearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#6b5ce7"/>
+                  <stop offset="100%" stop-color="#7c6fff"/>
+                </linearGradient>
+              </defs>
+              <!-- Chat bubbles in background -->
+              <rect x="60" y="50" width="300" height="36" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <rect x="60" y="100" width="220" height="36" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <rect x="60" y="150" width="340" height="36" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <!-- Floating Panel -->
+              <rect x="520" y="20" width="360" height="340" rx="16" fill="url(#panelGrad)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+              <!-- Panel header -->
+              <text x="540" y="54" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="#f4f4f5">MerOb Memories</text>
+              <circle cx="855" cy="46" r="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+              <text x="851" y="50" font-family="sans-serif" font-size="10" fill="#a1a1aa">✕</text>
+              <!-- Search bar -->
+              <rect x="540" y="64" width="320" height="30" rx="8" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="558" y="82" font-family="Inter,sans-serif" font-size="11" fill="#5a5a6a">Search memories…</text>
+              <!-- Memory card 1 -->
+              <rect x="540" y="106" width="320" height="66" rx="10" fill="rgba(124,111,255,0.08)" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <text x="556" y="125" font-family="Inter,sans-serif" font-size="11" font-weight="600" fill="#c9c4ff">RAG Architecture patterns</text>
+              <text x="556" y="141" font-family="Inter,sans-serif" font-size="10" fill="#7a7a8a">Vector stores, chunking strategies, hybrid search…</text>
+              <rect x="796" y="118" width="52" height="20" rx="6" fill="url(#btnGrad)"/>
+              <text x="810" y="131" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#fff">Inject</text>
+              <!-- Memory card 2 -->
+              <rect x="540" y="182" width="320" height="66" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+              <text x="556" y="201" font-family="Inter,sans-serif" font-size="11" font-weight="600" fill="#d4d4d8">OAuth2 vs API Keys debate</text>
+              <text x="556" y="217" font-family="Inter,sans-serif" font-size="10" fill="#7a7a8a">Scopes, refresh tokens, PKCE flow for SPAs…</text>
+              <rect x="796" y="194" width="52" height="20" rx="6" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+              <text x="810" y="207" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#a1a1aa">Inject</text>
+              <!-- Memory card 3 -->
+              <rect x="540" y="258" width="320" height="66" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+              <text x="556" y="277" font-family="Inter,sans-serif" font-size="11" font-weight="600" fill="#d4d4d8">Rust ownership &amp; lifetimes</text>
+              <text x="556" y="293" font-family="Inter,sans-serif" font-size="10" fill="#7a7a8a">Borrow checker rules, Arc vs Rc, async lifetimes…</text>
+              <rect x="796" y="270" width="52" height="20" rx="6" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+              <text x="810" y="283" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#a1a1aa">Inject</text>
+            </svg>
+          </div>
+
+          <!-- Panel 2: Knowledge Graph -->
+          <div class="demo-panel" id="panel-graph" hidden>
+            <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+              <rect width="900" height="380" fill="#08080f"/>
+              <defs>
+                <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#7c6fff" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#7c6fff" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <!-- Edges -->
+              <line x1="450" y1="190" x2="250" y2="100" stroke="rgba(124,111,255,0.25)" stroke-width="1.5"/>
+              <line x1="450" y1="190" x2="650" y2="100" stroke="rgba(124,111,255,0.25)" stroke-width="1.5"/>
+              <line x1="450" y1="190" x2="160" y2="230" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <line x1="450" y1="190" x2="740" y2="230" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <line x1="450" y1="190" x2="310" y2="310" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <line x1="450" y1="190" x2="590" y2="310" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <line x1="250" y1="100" x2="160" y2="230" stroke="rgba(124,111,255,0.15)" stroke-width="1"/>
+              <line x1="650" y1="100" x2="740" y2="230" stroke="rgba(124,111,255,0.15)" stroke-width="1"/>
+              <line x1="310" y1="310" x2="160" y2="230" stroke="rgba(124,111,255,0.12)" stroke-width="1"/>
+              <line x1="590" y1="310" x2="740" y2="230" stroke="rgba(124,111,255,0.12)" stroke-width="1"/>
+              <!-- Secondary nodes -->
+              <circle cx="250" cy="100" r="32" fill="rgba(124,111,255,0.12)" stroke="rgba(124,111,255,0.35)" stroke-width="1.5"/>
+              <text x="250" y="95" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" fill="#c9c4ff">LLMs</text>
+              <text x="250" y="108" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Models</text>
+              <circle cx="650" cy="100" r="32" fill="rgba(124,111,255,0.12)" stroke="rgba(124,111,255,0.35)" stroke-width="1.5"/>
+              <text x="650" y="95" text-anchor="middle" font-family="Inter,sans-serif" font-size="9.5" fill="#c9c4ff">RAG</text>
+              <text x="650" y="108" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Retrieval</text>
+              <circle cx="160" cy="230" r="28" fill="rgba(124,111,255,0.08)" stroke="rgba(124,111,255,0.25)" stroke-width="1"/>
+              <text x="160" y="225" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#b0aee8">Rust</text>
+              <text x="160" y="237" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Language</text>
+              <circle cx="740" cy="230" r="28" fill="rgba(124,111,255,0.08)" stroke="rgba(124,111,255,0.25)" stroke-width="1"/>
+              <text x="740" y="225" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#b0aee8">OAuth2</text>
+              <text x="740" y="237" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Security</text>
+              <circle cx="310" cy="310" r="26" fill="rgba(124,111,255,0.08)" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <text x="310" y="305" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#b0aee8">React</text>
+              <text x="310" y="317" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Frontend</text>
+              <circle cx="590" cy="310" r="26" fill="rgba(124,111,255,0.08)" stroke="rgba(124,111,255,0.2)" stroke-width="1"/>
+              <text x="590" y="305" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#b0aee8">Vector DB</text>
+              <text x="590" y="317" text-anchor="middle" font-family="Inter,sans-serif" font-size="8" fill="#7a7a8a">Storage</text>
+              <circle cx="100" cy="100" r="20" fill="rgba(124,111,255,0.06)" stroke="rgba(124,111,255,0.18)" stroke-width="1"/>
+              <text x="100" y="104" text-anchor="middle" font-family="Inter,sans-serif" font-size="8.5" fill="#9090aa">GraphDB</text>
+              <circle cx="800" cy="100" r="20" fill="rgba(124,111,255,0.06)" stroke="rgba(124,111,255,0.18)" stroke-width="1"/>
+              <text x="800" y="104" text-anchor="middle" font-family="Inter,sans-serif" font-size="8.5" fill="#9090aa">Embeddings</text>
+              <line x1="160" y1="230" x2="100" y2="100" stroke="rgba(124,111,255,0.1)" stroke-width="1"/>
+              <line x1="740" y1="230" x2="800" y2="100" stroke="rgba(124,111,255,0.1)" stroke-width="1"/>
+              <!-- Central glow -->
+              <circle cx="450" cy="190" r="60" fill="url(#nodeGlow)"/>
+              <!-- Central node -->
+              <circle cx="450" cy="190" r="44" fill="rgba(124,111,255,0.18)" stroke="rgba(124,111,255,0.6)" stroke-width="2"/>
+              <text x="450" y="185" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#e0dcff">API Design</text>
+              <text x="450" y="200" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" fill="#a09dc8">Architecture</text>
+            </svg>
+          </div>
+
+          <!-- Panel 3: Obsidian Vault -->
+          <div class="demo-panel" id="panel-vault" hidden>
+            <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+              <rect width="900" height="380" fill="#0b0b12"/>
+              <!-- Sidebar -->
+              <rect x="0" y="0" width="220" height="380" fill="rgba(255,255,255,0.02)" stroke-width="0"/>
+              <rect x="220" y="0" width="1" height="380" fill="rgba(255,255,255,0.06)"/>
+              <!-- Sidebar header -->
+              <text x="18" y="32" font-family="Inter,sans-serif" font-size="10" font-weight="600" fill="#6a6a7a" letter-spacing="0.08em">VAULT</text>
+              <!-- Folder: ChatGPT -->
+              <text x="18" y="58" font-family="Inter,sans-serif" font-size="11" fill="#a1a1aa">▾ ChatGPT/</text>
+              <text x="32" y="76" font-family="Inter,sans-serif" font-size="10.5" fill="#d4d4d8">RAG-Architecture.md</text>
+              <text x="32" y="93" font-family="Inter,sans-serif" font-size="10.5" fill="#7a7a8a">LLM-Evaluation.md</text>
+              <text x="32" y="110" font-family="Inter,sans-serif" font-size="10.5" fill="#7a7a8a">Prompt-Engineering.md</text>
+              <!-- Folder: Claude -->
+              <text x="18" y="133" font-family="Inter,sans-serif" font-size="11" fill="#a1a1aa">▾ Claude/</text>
+              <text x="32" y="151" font-family="Inter,sans-serif" font-size="10.5" fill="#7a7a8a">OAuth2-vs-APIKeys.md</text>
+              <text x="32" y="168" font-family="Inter,sans-serif" font-size="10.5" fill="#7a7a8a">Rust-Lifetimes.md</text>
+              <!-- Folder: Gemini -->
+              <text x="18" y="191" font-family="Inter,sans-serif" font-size="11" fill="#a1a1aa">▸ Gemini/</text>
+              <text x="18" y="214" font-family="Inter,sans-serif" font-size="11" fill="#a1a1aa">▸ Categories/</text>
+              <!-- Note count -->
+              <text x="18" y="350" font-family="Inter,sans-serif" font-size="10" fill="#4a4a5a">47 notes · 12 topics</text>
+              <!-- Main editor -->
+              <rect x="230" y="20" width="660" height="340" rx="0" fill="transparent"/>
+              <!-- Frontmatter block -->
+              <rect x="248" y="24" width="624" height="56" rx="6" fill="rgba(124,111,255,0.06)" stroke="rgba(124,111,255,0.15)" stroke-width="1"/>
+              <text x="262" y="42" font-family="'SF Mono',monospace" font-size="10" fill="#7a7a8a">---</text>
+              <text x="262" y="56" font-family="'SF Mono',monospace" font-size="10" fill="#7a7a8a">source: ChatGPT  ·  date: 2026-06-07  ·  tags: [rag, vectors]</text>
+              <text x="262" y="70" font-family="'SF Mono',monospace" font-size="10" fill="#7a7a8a">---</text>
+              <!-- Heading -->
+              <text x="248" y="110" font-family="Inter,sans-serif" font-size="18" font-weight="700" fill="#f4f4f5"># RAG Architecture</text>
+              <!-- Body text -->
+              <text x="248" y="138" font-family="Inter,sans-serif" font-size="11.5" fill="#a1a1aa">## Key Concepts</text>
+              <text x="248" y="158" font-family="Inter,sans-serif" font-size="11" fill="#8a8a9a">- Chunking strategy impacts retrieval quality significantly</text>
+              <text x="248" y="175" font-family="Inter,sans-serif" font-size="11" fill="#8a8a9a">- Hybrid search combines dense + sparse retrieval</text>
+              <text x="248" y="192" font-family="Inter,sans-serif" font-size="11" fill="#8a8a9a">- Re-ranking improves precision at top-k results</text>
+              <!-- Wikilinks -->
+              <text x="248" y="220" font-family="Inter,sans-serif" font-size="11.5" fill="#a1a1aa">## Related</text>
+              <rect x="248" y="230" width="120" height="18" rx="4" fill="rgba(124,111,255,0.12)" stroke="rgba(124,111,255,0.3)" stroke-width="1"/>
+              <text x="256" y="243" font-family="'SF Mono',monospace" font-size="10" fill="#9d8cff">[[Vector DB]]</text>
+              <rect x="378" y="230" width="104" height="18" rx="4" fill="rgba(124,111,255,0.12)" stroke="rgba(124,111,255,0.3)" stroke-width="1"/>
+              <text x="386" y="243" font-family="'SF Mono',monospace" font-size="10" fill="#9d8cff">[[Embeddings]]</text>
+              <rect x="492" y="230" width="82" height="18" rx="4" fill="rgba(124,111,255,0.12)" stroke="rgba(124,111,255,0.3)" stroke-width="1"/>
+              <text x="500" y="243" font-family="'SF Mono',monospace" font-size="10" fill="#9d8cff">[[LLMs]]</text>
+              <!-- Cursor blink -->
+              <rect x="248" y="270" width="2" height="14" fill="#7c6fff" opacity="0.8"/>
+            </svg>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. INSTALL QUICKSTART -->
+  <section class="section section--auto center" id="sec-install">
+    <div class="section-content section-narrow">
+      <div class="badge">//10 — Get Started</div>
+      <h2>Up and running<br>in 3 steps.</h2>
+      <p>No account, no cloud. Just clone, run, and start capturing.</p>
+
+      <div class="install-steps">
+
+        <div class="install-step">
+          <div class="install-step__num">1</div>
+          <div style="flex:1">
+            <div class="install-step__label">Clone &amp; install</div>
+            <div class="code-block">
+              <span class="cmd">git clone https://github.com/nicobailon/merob &amp;&amp; cd merob</span>
+              <button class="copy-btn" data-copy="git clone https://github.com/nicobailon/merob && cd merob">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="install-step">
+          <div class="install-step__num">2</div>
+          <div style="flex:1">
+            <div class="install-step__label">Start the local server</div>
+            <div class="code-block">
+              <span class="cmd">./start.sh</span>
+              <span class="comment" style="margin-left:0.5rem">&nbsp;# or start.bat on Windows</span>
+              <button class="copy-btn" data-copy="./start.sh">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="install-step">
+          <div class="install-step__num">3</div>
+          <div style="flex:1">
+            <div class="install-step__label">Load the Chrome extension</div>
+            <div class="code-block" style="flex-direction:column; align-items:flex-start; gap:0.25rem;">
+              <span class="comment"># chrome://extensions → Enable Developer Mode</span>
+              <span class="comment"># → Load unpacked → select /merob/chrome_extension</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <a href="https://github.com/nicobailon/merob" target="_blank" class="btn" style="margin-top: 2.5rem;">
+        View Full Docs on GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <div class="logo" style="mix-blend-mode: normal;">
+          <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="#7c6fff" stroke-width="2" stroke-linejoin="round"/></svg>
+          MerOb
+        </div>
+        <p>Turn your AI conversations into a self-organizing knowledge graph. 100% local, open source, forever free.</p>
+        <div class="footer-social">
+          <a href="https://github.com/nicobailon/merob" target="_blank" class="footer-icon-link" aria-label="GitHub">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-col__heading">Product</div>
+        <ul class="footer-col__links">
+          <li><a href="#sec-how">How It Works</a></li>
+          <li><a href="#sec-features">Features</a></li>
+          <li><a href="#sec-demo">Screenshots</a></li>
+          <li><a href="#sec-install">Install</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-col__heading">Resources</div>
+        <ul class="footer-col__links">
+          <li><a href="https://github.com/nicobailon/merob" target="_blank">GitHub</a></li>
+          <li><a href="https://github.com/nicobailon/merob/blob/main/README.md" target="_blank">Documentation</a></li>
+          <li><a href="https://github.com/nicobailon/merob/issues" target="_blank">Report a Bug</a></li>
+          <li><a href="https://obsidian.md" target="_blank">Obsidian</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2026 MerOb — Open source under MIT License.</span>
+      <a href="https://github.com/nicobailon/merob" target="_blank">★ Star on GitHub</a>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+  <!-- Animations for new sections (non-module, runs after GSAP CDN is loaded) -->
+  <script>
+    // Intro loader fade-out (independent of everything else)
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var loader = document.getElementById('loader');
+        if (loader) loader.classList.add('hidden');
+      }, 1900);
+    });
+    // Fallback in case 'load' already fired or stalls
+    setTimeout(function() {
+      var loader = document.getElementById('loader');
+      if (loader) loader.classList.add('hidden');
+    }, 4000);
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+      // Sound toggle (aesthetic — toggles brand accent state)
+      var soundToggle = document.getElementById('soundToggle');
+      var soundLabel = document.getElementById('soundLabel');
+      if (soundToggle) {
+        soundToggle.addEventListener('click', function() {
+          var off = soundToggle.classList.toggle('off');
+          soundLabel.textContent = off ? 'Sound Off' : 'Sound On';
+        });
+      }
+
+      // How-It-Works cards stagger
+      gsap.from('.how-step', {
+        scrollTrigger: { trigger: '#sec-how', start: 'top 70%' },
+        opacity: 0, y: 30, stagger: 0.15, duration: 0.8, ease: 'power3.out'
+      });
+
+      // Platform badges stagger
+      gsap.from('.platform-badge', {
+        scrollTrigger: { trigger: '#sec-platforms', start: 'top 70%' },
+        opacity: 0, scale: 0.92, stagger: 0.1, duration: 0.6, ease: 'back.out(1.4)'
+      });
+
+      // Feature items stagger
+      gsap.from('.feature-item', {
+        scrollTrigger: { trigger: '#sec-features', start: 'top 70%' },
+        opacity: 0, y: 20, stagger: 0.08, duration: 0.7, ease: 'power3.out'
+      });
+
+      // Install steps stagger
+      gsap.from('.install-step', {
+        scrollTrigger: { trigger: '#sec-install', start: 'top 70%' },
+        opacity: 0, x: -20, stagger: 0.12, duration: 0.7, ease: 'power3.out'
+      });
+
+      // Demo tab switching
+      document.querySelectorAll('.demo-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.demo-tab').forEach(function(t) { t.classList.remove('active'); });
+          document.querySelectorAll('.demo-panel').forEach(function(p) { p.hidden = true; });
+          tab.classList.add('active');
+          var target = document.getElementById(tab.dataset.panel);
+          target.hidden = false;
+          gsap.fromTo(target, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3 });
+        });
+      });
+
+      // Copy buttons
+      document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          navigator.clipboard.writeText(btn.dataset.copy).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.color = '#a6e3a1';
+            setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 1500);
+          });
+        });
+      });
+
+      // Footer anchor smooth scroll
+      document.querySelectorAll('footer a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+          e.preventDefault();
+          var target = document.querySelector(anchor.getAttribute('href'));
+          if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+
+    });
+  </script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Text animations run immediately — independent of brain model loading
+    function initTextAnimations() {
+      gsap.utils.toArray('.section-content').forEach((content) => {
+        gsap.to(content, {
+          scrollTrigger: {
+            trigger: content.parentElement,
+            start: "top 70%",
+            end: "bottom 30%",
+            toggleActions: "play reverse play reverse",
+          },
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: "power3.out"
+        });
+      });
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+    }
+    initTextAnimations();
+
+    // ThreeJS Scene Setup
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.z = 8;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    const mainLight = new THREE.PointLight(0x7c6fff, 500); // primary purple
+    mainLight.position.set(3, 4, 5);
+    scene.add(mainLight);
+
+    const fillLight = new THREE.PointLight(0xff8fa3, 300); // pinkish
+    fillLight.position.set(-3, -4, -5);
+    scene.add(fillLight);
+    
+    const backLight = new THREE.PointLight(0xa6e3a1, 400); // greenish
+    backLight.position.set(0, 5, -5);
+    scene.add(backLight);
+
+    // Groups for separate animation controls
+    const scrollGroup = new THREE.Group();
+    scene.add(scrollGroup);
+
+    const idleGroup = new THREE.Group();
+    scrollGroup.add(idleGroup);
+
+    let brainModel;
+
+    const loader = new GLTFLoader();
+    loader.load('./assets/brain.glb', (gltf) => {
+      brainModel = gltf.scene;
+      
+      // Center and scale the model
+      const box = new THREE.Box3().setFromObject(brainModel);
+      const size = box.getSize(new THREE.Vector3()).length();
+      const scale = 4.5 / size;
+      brainModel.scale.setScalar(scale);
+
+      const center = box.getCenter(new THREE.Vector3());
+      brainModel.position.sub(center.multiplyScalar(scale));
+
+      // Collect meshes BEFORE adding children to avoid infinite traverse recursion
+      const meshes = [];
+      brainModel.traverse((child) => { if (child.isMesh) meshes.push(child); });
+      meshes.forEach((child) => {
+        child.material = new THREE.MeshPhysicalMaterial({
+          color: 0x9d8cff,
+          emissive: 0x1a0a3a,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.4,
+          roughness: 0.1,
+          metalness: 0.9,
+        });
+        const glassCore = new THREE.Mesh(
+          child.geometry,
+          new THREE.MeshPhysicalMaterial({
+            color: 0x0f0f1a,
+            emissive: 0x050510,
+            transparent: true,
+            opacity: 0.7,
+            roughness: 0.1,
+            transmission: 1,
+            thickness: 2.0,
+            ior: 1.5,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1
+          })
+        );
+        child.add(glassCore);
+      });
+
+      idleGroup.add(brainModel);
+
+      // Initial position for desktop vs mobile
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        scrollGroup.position.set(0, 2, -2);
+      } else {
+        scrollGroup.position.set(2.5, 0, 0); // Offset to right for Hero text on left
+      }
+      scrollGroup.rotation.set(0.1, -0.4, 0);
+
+      initScrollAnimations(isMobile);
+    });
+
+    // Mouse tracking for subtle parallax
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX - window.innerWidth / 2);
+      mouseY = (e.clientY - window.innerHeight / 2);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const time = clock.getElapsedTime();
+
+      if (brainModel) {
+        // Idle floating
+        idleGroup.position.y = Math.sin(time * 1.5) * 0.1;
+        
+        // Smooth mouse follow
+        targetX = mouseX * 0.0005;
+        targetY = mouseY * 0.0005;
+        idleGroup.rotation.y += (targetX - idleGroup.rotation.y) * 0.05;
+        idleGroup.rotation.x += (targetY - idleGroup.rotation.x) * 0.05;
+      }
+      
+      renderer.render(scene, camera);
+    }
+    
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      ScrollTrigger.refresh();
+    });
+
+    function initScrollAnimations(isMobile) {
+      // Brain Scrollytelling Sequence
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: "#scrolly-sections",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1.5, // Smooth scrubbing
+        }
+      });
+
+      if (!isMobile) {
+        // Desktop Sequence
+        tl
+        // To Sec 2
+        .to(scrollGroup.position, { x: -2.5, y: 0, z: 1, ease: "power1.inOut" }, "sec2")
+        .to(scrollGroup.rotation, { x: 0.3, y: 1.2, z: 0.2, ease: "power1.inOut" }, "sec2")
+        
+        // To Sec 3
+        .to(scrollGroup.position, { x: 2.5, y: -0.5, z: 2.5, ease: "power1.inOut" }, "sec3")
+        .to(scrollGroup.rotation, { x: -0.2, y: -0.8, z: -0.1, ease: "power1.inOut" }, "sec3")
+        
+        // To Sec 4
+        .to(scrollGroup.position, { x: -2.5, y: -0.5, z: 2, ease: "power1.inOut" }, "sec4")
+        .to(scrollGroup.rotation, { x: 1.5, y: Math.PI, z: 0, ease: "power1.inOut" }, "sec4")
+        
+        // To Sec 5
+        .to(scrollGroup.position, { x: 2.5, y: 0, z: 1.5, ease: "power1.inOut" }, "sec5")
+        .to(scrollGroup.rotation, { x: -1.5, y: Math.PI * 1.5, z: 0.5, ease: "power1.inOut" }, "sec5")
+        
+        // To Sec 6
+        .to(scrollGroup.position, { x: 0, y: 0, z: -1, ease: "power2.inOut" }, "sec6")
+        .to(scrollGroup.rotation, { x: 0, y: Math.PI * 2, z: 0, ease: "power2.inOut" }, "sec6");
+      } else {
+        // Mobile Sequence
+        tl
+        .to(scrollGroup.position, { y: 2, z: 0, ease: "power1.inOut" }, "sec2")
+        .to(scrollGroup.rotation, { y: 1.5, ease: "power1.inOut" }, "sec2")
+        
+        .to(scrollGroup.position, { y: 2, z: 1, ease: "power1.inOut" }, "sec3")
+        .to(scrollGroup.rotation, { y: -1, ease: "power1.inOut" }, "sec3")
+        
+        .to(scrollGroup.position, { y: 2, z: 0, ease: "power1.inOut" }, "sec4")
+        .to(scrollGroup.rotation, { x: 1.5, ease: "power1.inOut" }, "sec4")
+        
+        .to(scrollGroup.position, { y: 2, z: 0, ease: "power1.inOut" }, "sec5")
+        .to(scrollGroup.rotation, { x: -0.5, y: Math.PI, ease: "power1.inOut" }, "sec5")
+        
+        .to(scrollGroup.position, { y: 1, z: -2, ease: "power2.inOut" }, "sec6")
+        .to(scrollGroup.rotation, { x: 0, y: Math.PI * 2, ease: "power2.inOut" }, "sec6");
+      }
+    }
+  </script>
+</body>
+</html>
