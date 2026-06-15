@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: psy-survey
+    runtime: node
+    startCommand: npm start
+    envVars:
+      - key: GMAIL_USER
+        value: germain.ia17@gmail.com
+      - key: GMAIL_PASSWORD
+        value: pvdlykyqxrsysyby
+      - key: NODE_ENV
+        value: production

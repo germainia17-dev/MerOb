@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  functions = "api"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[env]
+  GMAIL_USER = "germain.ia17@gmail.com"
+  GMAIL_PASSWORD = "pvdlykyqxrsysyby"
