@@ -14,3 +14,4 @@ conversation.txt
 AI_OS/
 notes/*
 !notes/example.md
+.vercel

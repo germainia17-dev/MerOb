@@ -2,12 +2,16 @@
   "name": "psy-survey",
   "version": "1.0.0",
   "description": "Sondage PSY - Assistant Personnel IA",
+  "type": "module",
   "private": true,
   "scripts": {
-    "build": "echo 'No build required'",
-    "dev": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build required'"
   },
   "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
     "nodemailer": "^6.9.7"
   },
   "engines": {
